@@ -3214,11 +3214,12 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     ///PARTICLES
     ///MESH MODEL (aka SCENE NODE)
     moGLMatrixf Model;
-    Model.MakeIdentity().Translate(    0.0+tx, 0.0+ty, tz )
+    Model.MakeIdentity()
          .Rotate(   rz*moMathf::PI/180, 0.0, 0.0, 1.0 )
          .Rotate(   ry*moMathf::PI/180, 0.0, 1.0, 0.0 )
          .Rotate(   rx*moMathf::PI/180, 1.0, 0.0, 0.0 )
-         .Scale( sx, sy, sz  );
+         .Scale( sx, sy, sz  )
+         .Translate(    0.0+tx, 0.0+ty, tz );
          //.Translate(    0.0, 0.0, -10);
 //         .Translate(    0.0, 0.0, -2.618 + 0.618*1.0 );
 

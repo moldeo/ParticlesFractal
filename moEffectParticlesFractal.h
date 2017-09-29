@@ -61,7 +61,7 @@
 #define MO_PARTICLES_SCALE_X 2
 #define MO_PARTICLES_SCALE_Y 3
 
-
+#define COSPI6 0.866025404
 
 ///Emitter Type
 /**
@@ -808,6 +808,7 @@ class moEffectParticlesFractal : public moEffect
 
         ///Dibuja la particula simple
         void DrawParticlesFractal( moTempo* tempogral, moEffectState* parentstate );
+        void DrawParticlesFractalVBO( moTempo* tempogral, moEffectState* parentstate );
         void DrawTracker();
 
         /// Funciones para la escritura de scripts específicos de particulas
@@ -855,7 +856,9 @@ class moEffectParticlesFractal : public moEffect
         int luaCmpMemory(moLuaVirtualMachine& vm);
         int luaReadMemory(moLuaVirtualMachine& vm);
         int luaWriteMemory(moLuaVirtualMachine& vm);
+        int luaLoadMemory(moLuaVirtualMachine& vm);
         int luaDumpMemory(moLuaVirtualMachine& vm);
+
         //int luaCellGrow(moLuaVirtualMachine& vm);
         //int luaCell(moLuaVirtualMachine& vm);
 
@@ -1123,12 +1126,24 @@ class moEffectParticlesFractal : public moEffect
         moTexture*  m_pCreationTextureFinal;
 
         int numParticles;
+        int numVertices;
         GLfloat *posArray;
         GLfloat *scaleArray;
         GLfloat *orientationArray;
         GLfloat *stateArray;
         GLfloat *velocityArray;
         GLfloat *colorArray;
+        GLfloat *materialArray;
+
+        GLfloat *indexArray;
+        GLfloat *quadsArray;
+        GLfloat *quadscoordArray;
+        GLfloat *trianglesArray;
+        GLfloat *trianglesCoordArray;
+        GLfloat *trianglesScaleArray;
+        GLfloat *trianglesOrientationArray;
+        GLfloat *trianglesColorArray;
+        GLint   *trianglesIndices;
 
         long    cell_position;
         long    cell_position_i;
@@ -1139,6 +1154,54 @@ class moEffectParticlesFractal : public moEffect
         ///calligram
         moTextureBuffer*    m_pTexBuf;
         int     m_nImages;
+        MOuint m_texture_array;
+
+        int w;
+        int h;
+
+        moShaderManager* pSMan;
+        moGLManager* pGLMan;
+        moRenderManager* pRMan;
+        moTextureManager* pTMan;
+        moFBManager* pFMan;
+
+        int m_emitions_w,m_emitions_h;
+        moShaderGLSL m_EmitterShader;
+        moFBO* m_pFBO_Emitions;
+        moTexture*  m_pEmitionsTexture;//morfogenes?
+        moTexture*  m_pEmitionsTextureSwap;//morfogenes?
+        GLint m_EmitterShaderPositionIndex;
+        GLint m_EmitterShaderTextureIndex;
+        GLint m_EmitterShaderProjectionMatrixIndex;
+        GLint m_EmitterShaderColsIndex;
+        GLint m_EmitterShaderRowsIndex;
+
+        moShaderGLSL m_RenderShader;
+        MOuint m_RenderShaderColorIndex;
+        MOuint m_RenderShaderOpacityIndex;
+        MOuint m_RenderShaderColorsIndex;
+        MOuint m_RenderShaderMaterialsIndex;
+        MOuint m_RenderShaderCellMemIndex;
+        MOuint m_RenderShaderScaleIndex;
+        MOuint m_RenderShaderScaleVIndex;
+        MOuint m_RenderShaderPositionIndex;
+        MOuint m_RenderShaderOrientationIndex;
+        MOuint m_RenderShaderTextureIndex;
+        MOuint m_RenderShaderTextureArrayIndex;
+        MOuint m_RenderShaderNormalIndex;
+        MOuint m_RenderShaderProjectionMatrixIndex;
+        MOuint m_RenderShaderTexCoordIndex;
+        MOuint m_RenderShaderTexCoordEdgeIndex;
+        MOuint m_RenderShaderWireframeWidthIndex;
+        MOuint m_RenderShaderTexWSegmentsIndex;
+        MOuint m_RenderShaderTexHSegmentsIndex;
+        MOuint m_RenderShaderLightIndex;
+
+        MOuint m_RenderShaderColsIndex;
+        MOuint m_RenderShaderRowsIndex;
+
+
+
 };
 
 

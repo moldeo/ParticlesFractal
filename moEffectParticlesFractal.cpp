@@ -172,11 +172,27 @@ moEffectParticlesFractal::moEffectParticlesFractal() {
   orientationArray = NULL;
   stateArray = NULL;
   colorArray = NULL;
+  materialArray = NULL;
+
+  quadsArray = NULL;
+  quadscoordArray = NULL;
+  trianglesArray = NULL;
+  trianglesCoordArray = NULL;
+  trianglesScaleArray = NULL;
+  trianglesOrientationArray = NULL;
+  trianglesColorArray = NULL;
+  trianglesIndices = NULL;
 
   cellcodeArray = NULL;
   cellmemoryArray = NULL;
 
-  g_fVBOSupported = false;
+    g_fVBOSupported = true;
+    pSMan = NULL;
+    pGLMan = NULL;
+    pRMan = NULL;
+    pTMan = NULL;
+    pFMan = NULL;
+    m_texture_array = 0;
 }
 
 moEffectParticlesFractal::~moEffectParticlesFractal() {
@@ -459,6 +475,13 @@ moEffectParticlesFractal::Init()
     m_bTrackerInit = false;
     m_pTrackerData = NULL;
 
+    if (m_pResourceManager) {
+        pSMan = m_pResourceManager->GetShaderMan();
+        pGLMan = m_pResourceManager->GetGLMan();
+        pRMan = m_pResourceManager->GetRenderMan();
+        pTMan = m_pResourceManager->GetTextureMan();
+        pFMan = m_pResourceManager->GetFBMan();
+    }
 
     ResetTimers();
     UpdateParameters();
@@ -932,7 +955,7 @@ void moEffectParticlesFractal::UpdateParameters() {
     if (posArray==NULL) {
       numParticles = m_rows * m_cols;
       posArray = new GLfloat[4 * numParticles]();
-      MODebug2->Push("Reading pixels: " +  IntToStr(numParticles) );
+      MODebug2->Push("Created posArray: " +  IntToStr(numParticles) );
     }
 
     if (posArray && m_pPositionTextureFinal) {
@@ -947,10 +970,80 @@ void moEffectParticlesFractal::UpdateParameters() {
       glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, posArray );
     }
 
+    if (quadsArray==NULL) {
+
+      numVertices = numParticles*4;
+
+      quadsArray = new GLfloat[4 * numVertices]();
+      quadscoordArray = new GLfloat[2 * numVertices]();
+      trianglesArray = new GLfloat[3*4*numVertices]();
+      trianglesCoordArray = new GLfloat[3*2*numVertices]();
+      trianglesScaleArray = new GLfloat[3*3*numVertices]();
+      trianglesOrientationArray = new GLfloat[3*3*numVertices]();
+      trianglesColorArray = new GLfloat[3*3*numVertices]();
+      trianglesIndices = new GLint[6*numVertices]();
+
+      for(int i=0; i<m_cols; i++) {
+
+        for(int j=0; j<m_rows; j++) {
+
+          int ijqindex = i*8 + j*m_cols*8;
+          int ijface = i*6 + j*m_cols*6;
+          int ij = i + j*m_cols;
+
+          quadscoordArray[ ijqindex ] = 0.0;
+          quadscoordArray[ ijqindex+1 ] = 0.0;
+
+          quadscoordArray[ ijqindex+2 ] = 1.0;
+          quadscoordArray[ ijqindex+3 ] = 0.0;
+
+          quadscoordArray[ ijqindex+4 ] = 1.0;
+          quadscoordArray[ ijqindex+5 ] = 1.0;
+
+          quadscoordArray[ ijqindex+6 ] = 0.0;
+          quadscoordArray[ ijqindex+7 ] = 1.0;
+
+          trianglesIndices[ijface] = ij;
+          trianglesIndices[ijface+1] = ij+1;
+          trianglesIndices[ijface+2] = ij+2;
+
+          trianglesIndices[ijface+3] = ij+1;
+          trianglesIndices[ijface+4] = ij+2;
+          trianglesIndices[ijface+5] = ij+3;
+
+          trianglesCoordArray[ij*6] = 0.5;
+          trianglesCoordArray[ij*6+1] = -0.5;
+
+          trianglesCoordArray[ij*6+2] = -0.5;
+          trianglesCoordArray[ij*6+3] = COSPI6*1.5;
+
+          trianglesCoordArray[ij*6+4] = 1.5;
+          trianglesCoordArray[ij*6+5] = COSPI6*1.5;
+
+          for(int k=0; k<9; k++) {
+            trianglesScaleArray[ij*9+k] = 1.0;
+            trianglesOrientationArray[ij*9+k] = 0.0;
+            trianglesColorArray[ij*9+k] = 1.0;
+          }
+
+        }
+
+      }
+
+      for(int i=0; i<m_cols; i++) {
+        for(int j=0; j<m_rows; j++) {
+
+        }
+      }
+
+      MODebug2->Message("Created quadsArray: " +  IntToStr(numVertices) );
+
+    }
+
     if (scaleArray==NULL) {
       numParticles = m_rows * m_cols;
       scaleArray = new GLfloat[4 * numParticles]();
-      MODebug2->Push("Reading pixels: " +  IntToStr(numParticles) );
+      MODebug2->Message("Created scaleArray: " +  IntToStr(numParticles) );
     }
 
     if (scaleArray && m_pScaleTextureFinal) {
@@ -968,7 +1061,9 @@ void moEffectParticlesFractal::UpdateParameters() {
     if (colorArray==NULL) {
       numParticles = m_rows * m_cols;
       colorArray = new GLfloat[4 * numParticles]();
-      MODebug2->Push("Reading pixels: " +  IntToStr(numParticles) );
+      //materialArray = new GLfloat[4 * numParticles]();
+      MODebug2->Message("colorArray: " +  IntToStr(numParticles) );
+      //MODebug2->Message("materialArray: " +  IntToStr(numParticles) );
     }
 
     if (colorArray && m_pColorTextureFinal) {
@@ -986,7 +1081,7 @@ void moEffectParticlesFractal::UpdateParameters() {
     if (orientationArray==NULL) {
       numParticles = m_rows * m_cols;
       orientationArray = new GLfloat[4 * numParticles]();
-      MODebug2->Push("Reading pixels: " +  IntToStr(numParticles) );
+      MODebug2->Message("orientationArray: " +  IntToStr(numParticles) );
     }
 
      if (orientationArray && m_pOrientationTextureFinal) {
@@ -1000,6 +1095,135 @@ void moEffectParticlesFractal::UpdateParameters() {
       glBindTexture( GL_TEXTURE_2D, m_pOrientationTextureFinal->GetGLId() );
       glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, orientationArray );
     }
+
+
+
+  if (m_EmitterShader.Initialized() && posArray) {
+
+    if (m_pFBO_Emitions)
+      m_pFBO_Emitions->Bind();
+
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+
+    ///MATERIAL
+    moMaterial Mat;
+      //Mat.m_Map = pTMan->GetTexture(pTMan->GetTextureMOId( "default", false ));
+      //Mat.m_MapGLId = Mat.m_Map->GetGLId();
+      Mat.m_MapGLId = glid;
+      Mat.m_Color = moColor( 1.0, 1.0, 1.0 );
+      Mat.m_fTextWSegments = 13.0f;
+      Mat.m_fTextHSegments = 13.0f;
+      Mat.m_vLight = moVector3f( -1.0, -1.0, -1.0 );
+      Mat.m_vLight.Normalize();
+      //Mat.m_PolygonMode = MO_POLYGONMODE_LINE;
+      //Mat.m_PolygonMode = MO_POLYGONMODE_FILL;
+      Mat.m_PolygonMode = MO_POLYGONMODE_POINT;
+      Mat.m_fWireframeWidth = 0.0005f;
+
+    ///PARTICLES
+    //moSphereGeometry Sphere( 0.5, 13, 13 );
+
+    ///MESH MODEL (aka SCENE NODE)
+    moGLMatrixf Model;
+    Model.MakeIdentity().Translate(    0.0, 0.0, -3 );
+    /*
+         .Rotate(   360.0*1.0*moMathf::DEG_TO_RAD, 0.0, 1.0, 0.0 )
+         .Translate(    0.0, 0.0, -2.618 + 0.618*1.0 );
+         */
+    //moMesh Mesh( Sphere, Mat );
+    //Mesh.SetModelMatrix(Model);
+
+    ///CAMERA PERSPECTIVE
+    moCamera3D Camera3D;
+    if (pGLMan) {
+     //pGLMan->SetDefaultPerspectiveView( w, h );
+     pGLMan->SetOrthographicView( w, h, -6.0, 6.0, -6.0, 6.0, -10.0, 10.0 );
+    }
+    Camera3D = pGLMan->GetProjectionMatrix();
+
+    ///RENDERING
+/*
+    if (pRMan) {
+      pRMan->Render( &Mesh, &Camera3D );
+    }
+*/
+
+    m_EmitterShader.StartShader();
+
+    moGLMatrixf& PMatrix( Camera3D );
+    const moGLMatrixf& MMatrix( Model );
+    moGLMatrixf Result;
+    Result = MMatrix*PMatrix;
+
+
+    //moGeometry& Geo( Sphere );
+    //const moFaceArray& Faces(Geo.GetFaces());
+    //const moVertexArray& Vertices(Geo.GetVertices());
+    //const float* Gpx = Geo.GetVerticesBuffer();
+    //const float* Gcx = Geo.GetColorBuffer();
+    //const float* Gtx = Geo.GetVerticesUVBuffer();
+    //const float* Gnx = Geo.GetNormalsBuffer();
+
+    //int facesCount = Faces.Count();
+
+    const float *pfv = Result.GetPointer();
+    //MODebug2->Message( "Result:\n"+Result.ToJSON() );
+    //MODebug2->Message( "facesCount:\n"+IntToStr(facesCount) );
+
+    moTexture* pMap = Mat.m_Map;
+    if (pMap) {
+        //int Tglid = pMap->GetGLId();
+        glEnable( GL_TEXTURE_2D );
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+        glActiveTexture( GL_TEXTURE0 );///ACTIVATE TEXTURE UNIT 0
+        glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
+        //MODebug2->Message( "Tglid:\n"+IntToStr(Tglid) );
+    }
+
+    glUniformMatrix4fv( m_EmitterShaderProjectionMatrixIndex, 1, GL_FALSE, pfv );
+    glUniform1i( m_EmitterShaderTextureIndex, 0 );///Pass TEXTURE UNIT 0 (use glActiveTexture and glBindTexture )
+    //MODebug2->Message("glUniform1iARB: m_EmitterShaderColsIndex: " + IntToStr(m_EmitterShaderColsIndex)+" v:" + IntToStr(m_cols) );
+    //MODebug2->Message("glUniform1iARB: m_EmitterShaderRowsIndex: " + IntToStr(m_EmitterShaderRowsIndex)+" v:" + IntToStr(m_rows) );
+    glUniform1iARB( m_EmitterShaderColsIndex, m_cols );
+    glUniform1iARB( m_EmitterShaderRowsIndex, m_rows );
+    //glUniform1f( m_EmitterShaderWireframeWidthIndex, Mat.m_fWireframeWidth );
+    //glUniform1f( m_EmitterShaderTexWSegmentsIndex, Mat.m_fTextWSegments );
+    //glUniform1f( m_EmitterShaderTexHSegmentsIndex, Mat.m_fTextHSegments );
+    //glUniform3fv( m_EmitterShaderLightIndex, 1, &Mat.m_vLight[0] );
+    //glUniform3fv( m_EmitterShaderColorIndex, 1, &Mat.m_Color[0] );
+    //glUniform1f( m_EmitterShaderOpacityIndex, Mat.m_fOpacity );
+
+    glEnableVertexAttribArray( m_EmitterShaderPositionIndex );
+    glVertexAttribPointer( m_EmitterShaderPositionIndex, 4, GL_FLOAT, false, 0, &posArray[0] );  // Set data type and location.
+
+    //glEnableVertexAttribArray( m_EmitterShaderColorsIndex );
+    //glVertexAttribPointer( m_EmitterShaderColorsIndex, 3, GL_FLOAT, false, 0, &Gcx[0] );
+
+    //glEnableVertexAttribArray( m_EmitterShaderTexCoordIndex );
+    //glVertexAttribPointer( m_EmitterShaderTexCoordIndex, 2, GL_FLOAT, false, 0, &Gtx[0] );  // Set data type and location.
+
+    //glEnableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+    //glVertexAttribPointer( m_EmitterShaderTexCoordEdgeIndex, 2, GL_FLOAT, false, 0, &Gtx[0] );  // Set data type and location.
+    //int vertexCount = p_src.m_Geometry.GetVertices().Count();
+    //int facesCount = p_src.m_Geometry.GetFaces().Count();
+    //glEnableVertexAttribArray( m_EmitterShaderNormalIndex );
+    //glVertexAttribPointer( m_EmitterShaderNormalIndex, 3, GL_FLOAT, false, 0, &Gnx[0] );
+
+    glDrawArrays(GL_POINTS, 0, m_cols*m_rows );
+
+
+    glDisableVertexAttribArray( m_EmitterShaderPositionIndex );
+    //glDisableVertexAttribArray( m_EmitterShaderColorsIndex );
+    //glDisableVertexAttribArray( m_EmitterShaderTexCoordIndex );
+    //glDisableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+    //glDisableVertexAttribArray( m_EmitterShaderNormalIndex );
+
+    m_EmitterShader.StopShader();
+    if (m_pFBO_Emitions)
+      m_pFBO_Emitions->Unbind();
+  }
 
 /**
 
@@ -1039,7 +1263,7 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
             SelectScriptFunction( "Init" );
             //AddFunctionParam( m_FramesPerSecond );
             RunSelectedFunction();
-
+            ResetTimers();
         } else MODebug2->Error(moText("ParticlesSimple couldnt compile lua script ") + (moText)fullscript );
 	}
 
@@ -1164,6 +1388,25 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
 
     random_color_function = m_Config.Eval(moR(PARTICLES_RANDOMCOLORFUNCTION));
     particles_separation = m_Config.Eval(moR(PARTICLES_SEPARATION));
+
+    if (texture_mode==PARTICLES_TEXTUREMODE_MANY2PATCH) {
+      m_pTexBuf = m_Config[moR(PARTICLES_FOLDERS)][MO_SELECTED][0].TextureBuffer();
+      if (m_pTexBuf) {
+          m_nImages = m_pTexBuf->GetImagesProcessed();
+          if (m_pTexBuf->LoadCompleted()) {
+            //CREAR TEXTURE ARRAY
+            if (m_texture_array==0) {
+              MODebug2->Message("Completed! GetImagesProcessed: "+IntToStr(m_nImages) );
+              m_texture_array = m_pTexBuf->GetTextureArray( 512, 512, 9, false );
+              MODebug2->Message("m_texture_array: "+IntToStr(m_texture_array) );
+            }
+          } else {
+            MODebug2->Message("GetImagesProcessed: "+IntToStr(m_nImages) );
+          }
+      }
+    } else {
+      m_pTexBuf = NULL;
+    }
 
 }
 
@@ -2190,7 +2433,460 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     }
   }
 
+/*
+  if ( pGLMan->GetGLMajorVersion() <2 ) {
+    return;
+  }
+*/
+  MODebug2->Message("moParticlesFractal::Init > Creating basic Emitter Shader...");
+  if (!m_EmitterShader.Initialized()) {
 
+    m_emitions_w = min(2048,p_cols*32);
+    m_emitions_h = min(2048,p_rows*32);
+
+    tName = "pf_emitions_swap_fx#"+this->GetLabelName()+"_";
+    Mid = TextureMan()->AddTexture( tName, m_emitions_w, m_emitions_h, tparam );
+    if (Mid>0) {
+        m_pEmitionsTextureSwap = TextureMan()->GetTexture(Mid);
+        m_pEmitionsTextureSwap->BuildEmpty( m_emitions_w, m_emitions_h );
+        //TextureMan()->GetTexture(Mid)->BuildEmpty( p_cols, p_rows );
+        MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " +
+                          IntToStr(m_emitions_w)+"x"+IntToStr(m_emitions_h) );
+    } else {
+        MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " +
+                          IntToStr(m_emitions_w)+"x"+IntToStr(m_emitions_h) );
+    }
+
+    tName = "pf_emitions_fx#"+this->GetLabelName()+"_";
+    Mid = TextureMan()->AddTexture( tName, m_emitions_w, m_emitions_h, tparam );
+    if (Mid>0) {
+        m_pEmitionsTexture = TextureMan()->GetTexture(Mid);
+        m_pEmitionsTexture->BuildEmpty( m_emitions_w, m_emitions_h );
+        //TextureMan()->GetTexture(Mid)->BuildEmpty( p_cols, p_rows );
+        MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " +
+                          IntToStr(m_emitions_w)+"x"+IntToStr(m_emitions_h) );
+    } else {
+        MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " +
+                          IntToStr(m_emitions_w)+"x"+IntToStr(m_emitions_h) );
+    }
+
+    m_EmitterShader.Init();
+    m_EmitterShader.CreateShader(
+            moText(
+            "#extension GL_EXT_gpu_shader4 : enable \n"
+            "\n"
+            "attribute vec4 position;\n"
+            "uniform mat4 projmatrix;\n"
+            "uniform int mcols=256;\n"
+            "uniform int mrows=256;\n"
+            "varying vec4 colorf;\n"
+            "\n"
+            "void main() {\n"
+            " int vid = gl_VertexID;\n"
+            " float fvid = float(vid);\n"
+            " float mmcols = float(mcols);\n"
+            " float frows = float(mrows);\n"
+            " float fcols = float(mmcols);\n"
+            " float vj = floor(fvid / fcols);\n"
+            " float vi = fvid - vj*fcols;\n"
+            " float f_j = vj / frows;\n"
+            " float f_i = vi / fcols;\n"
+            " float red_z = abs( position.z/(0.5*(fcols+frows)) );"
+            " colorf = vec4( 0.5+red_z, 0.5+0.5*f_i, 0.5+0.5*f_j, 1.0);\n"
+            //" if (frows==0.0 && fcols==0.0) colorf = vec4( 1.0, 0.0, 0.0, 1.0);\n"
+            //" else if (fcols==0.0) colorf = vec4( 0.0, 1.0, 0.0, 1.0);\n"
+            //" else if (frows==0.0) colorf = vec4( 0.0, 0.0, 1.0, 1.0);\n"
+            "	gl_Position = projmatrix*position;\n"
+            "}\n"
+            ),
+            moText(
+          #ifdef OPENGLESV2
+            "precision mediump float;"
+          #endif
+            "uniform sampler2D t_image;\n"
+            "varying vec4 colorf;\n"
+            "\n"
+            "void main() {\n"
+            ""
+            "	gl_FragColor = vec4( 1.0, colorf.g, colorf.b, 1.0 );\n"
+            "}\n"
+            )
+          );
+
+          m_EmitterShader.PrintVertShaderLog();
+          m_EmitterShader.PrintFragShaderLog();
+
+          m_EmitterShaderPositionIndex = m_EmitterShader.GetAttribID(moText("position"));
+         //  m_EmitterShaderColorsIndex = m_EmitterShader.GetAttribID(moText("colors"));
+         //  m_EmitterShaderTexCoordIndex = m_EmitterShader.GetAttribID(moText("t_coord"));
+         //  m_EmitterShaderTexCoordEdgeIndex = m_EmitterShader.GetAttribID(moText("t_coordedge"));
+         //  m_EmitterShaderNormalIndex = m_EmitterShader.GetAttribID(moText("normal"));
+
+          m_EmitterShaderColsIndex = m_EmitterShader.GetUniformID(moText("mcols"));
+          m_EmitterShaderRowsIndex = m_EmitterShader.GetUniformID(moText("mrows"));
+         //  m_EmitterShaderColorIndex = m_EmitterShader.GetUniformID(moText("color"));
+         //  m_EmitterShaderOpacityIndex = m_EmitterShader.GetUniformID(moText("opacity"));
+          m_EmitterShaderTextureIndex = m_EmitterShader.GetUniformID(moText("t_image"));
+          m_EmitterShaderProjectionMatrixIndex = m_EmitterShader.GetUniformID("projmatrix");
+         //  m_EmitterShaderWireframeWidthIndex = m_EmitterShader.GetUniformID(moText("wireframe_width"));
+         //  m_EmitterShaderTexWSegmentsIndex = m_EmitterShader.GetUniformID(moText("wseg"));
+         //  m_EmitterShaderTexHSegmentsIndex = m_EmitterShader.GetUniformID(moText("hseg"));
+         //  m_EmitterShaderLightIndex = m_EmitterShader.GetUniformID(moText("a_light"));
+
+           MODebug2->Message(moText(
+
+                              "moParticlesFractal::Init > m_EmitterShader Attrib IDs,"
+                              " position:"+IntToStr(m_EmitterShaderPositionIndex)+""
+
+/*                              " normal:"+IntToStr(m_EmitterShaderNormalIndex)+""
+                              " color:"+IntToStr(m_EmitterShaderColorIndex)+""
+                              " opacity:"+IntToStr(m_EmitterShaderOpacityIndex)+""
+                              " t_coord:"+IntToStr(m_EmitterShaderTexCoordIndex)+""
+                              " t_coordedge:"+IntToStr(m_EmitterShaderTexCoordEdgeIndex)*/
+
+                              ));
+
+           MODebug2->Message( moText("moParticlesFractal::Init > m_EmitterShader Uniform IDs,")
+                              +moText(" projmatrix:")+IntToStr(m_EmitterShaderProjectionMatrixIndex)+""
+                              " cols:"+IntToStr(m_EmitterShaderColsIndex)+""
+                              " rows:"+IntToStr(m_EmitterShaderRowsIndex)+""
+                              /*+moText(" wireframe_width:")+IntToStr(m_EmitterShaderWireframeWidthIndex)
+                              +moText(" wseg:")+IntToStr(m_EmitterShaderTexWSegmentsIndex)
+                              +moText(" hseg:")+IntToStr(m_EmitterShaderTexHSegmentsIndex)
+                              +moText(" a_light:")+IntToStr(m_EmitterShaderLightIndex)*/
+                              " t_image:"+IntToStr(m_EmitterShaderTextureIndex)
+                              );
+
+
+      int idx = pFMan->CreateFBO();
+      MOuint attach_pt;
+      m_pFBO_Emitions = pFMan->GetFBO(idx);
+
+      if (m_pFBO_Emitions && m_pEmitionsTexture) {
+          m_pEmitionsTexture->SetFBO( m_pFBO_Emitions );
+          m_pFBO_Emitions->AddTexture(
+                    m_pEmitionsTexture->GetWidth(), m_pEmitionsTexture->GetHeight(),
+                     m_pEmitionsTexture->GetTexParam(),
+                     m_pEmitionsTexture->GetGLId(), attach_pt);
+          m_pEmitionsTexture->SetFBOAttachPoint(attach_pt);
+        }
+  }
+
+/**
+
+mat4 rotationMatrix(vec3 axis, float angle)\n"
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat4(oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+                oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+                oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+                0.0,                                0.0,                                0.0,                                1.0);
+}
+
+
+
+*/
+
+
+  if (!m_RenderShader.Initialized()) {
+      MODebug2->Message("moParticlesFractal::InitParticlesFractal > Creating basic Render Shader...");
+      m_RenderShader.Init();
+      m_RenderShader.CreateShader(
+            moText(
+            "#version 330\n"
+            "in vec4 position;\n"
+            "in vec4 scale;\n"
+            "in vec4 orientation;\n"
+            "in vec4 colors;\n"
+
+            //"in vec4 materials;\n"
+            "uniform sampler2D t_cellmem;\n"
+            "uniform mat4 projmatrix;\n"
+            "uniform vec3 color;\n"
+            "uniform vec3 scalev;\n"
+            "uniform float opacity;\n"
+            "uniform int mcols=256;\n"
+            "uniform int mrows=256;\n"
+            "out mat4 pmatrix;\n"
+            //"attribute vec2 t_coord;\n"
+            //"attribute vec3 normal;\n"
+            //"out vec4 vertex_color;\n"
+            //"out vec4 vertex_normal;\n"
+            //"out vec2 vertex_coord;\n"
+            "\n"
+            "out VertexAttrib {\n"
+            //" vec2 texcoord;\n"
+            " vec4 color;\n"
+            " vec4 position;\n"
+            " vec4 scale;\n"
+            " float ffvid;\n"
+            " float material;\n"
+            //" vec4 normal;\n"
+            " vec4 orientation;\n"
+            "} vertex;\n"
+            "\n"
+            "void main() {\n"
+            " int vid = gl_VertexID;\n"
+            " float fvid = float(vid);\n"
+            " float mmcols = float(mcols);\n"
+            " float frows = float(mrows);\n"
+            " float fcols = float(mmcols);\n"
+            " float vj = floor(fvid / fcols);\n"
+            " float vi = fvid - vj*fcols;\n"
+            " float f_j = (vj) / frows;\n"
+            " float f_i = (vi) / fcols;\n"
+            //"vertex.texcoord = t_coord;\n"
+            //"	vec4 vertex01 = vec4( position.x, position.y-0.4, position.z, 1.0);\n"
+            //"	vec4 vertex02 = vec4( position.x-0.5, position.y+0.1, position.z, 1.0);\n"
+            //"	vec4 vertex03 = vec4( position.x+0.5, position.y+0.1, position.z, 1.0);\n"
+            //"	vec4 vfinal = (position.w-0.1)*(position.w-0.2)*vertex03/(0.1*0.2);\n"
+            //"	vec4 vfinal = (position.w-0.1)*(position.w-0.2)*vertex03/(0.1*0.2);\n"
+            " vertex.position = position;\n"
+            "	gl_Position = position;\n"
+            "vertex.color = vec4( colors.r*color.r, colors.g*color.g, colors.b*color.b, opacity*colors.a);\n"
+            //"vertex.normal = orientation;\n"
+            "vertex.scale = vec4(scale.x*scalev.x, scale.y*scalev.y, scale.z*scalev.z, 1.0);\n"
+            "vertex.ffvid = fvid;\n"
+            "vertex.material = texture2D( t_cellmem, vec2( f_i, f_j ) ).r;\n"
+            "vertex.orientation = orientation;\n"
+            //"vertex.material = materials.x;\n"
+            //"vertex.material = fvid;\n"
+            "\n"
+            //"vertex_color = vec4( color.rgb,opacity) + colors;\n"
+            //"vertex_normal = orientation;\n"
+            //"vertex_coord = vec2(0.5,0.5);\n"
+            "pmatrix = projmatrix;\n"
+            //"vertex_coord = scale;\n"
+            //"	gl_Position = position;\n"
+            "}\n"
+            ),
+            moText(
+            "#version 330\n"
+          #ifdef OPENGLESV2
+            "precision mediump float;"
+          #endif
+            //"uniform sampler2D t_image;\n"
+            "uniform sampler2DArray t_array;\n"
+            //uniform vec3 a_light;\n"
+            "\n"
+            "in vec4 vertex_color;\n"
+            "in vec2 vertex_coord;\n"
+            "in float vertex_id;\n"
+            "in float vertex_material;\n"
+            //"in vec4 vertex_normal;\n"
+            "\n"
+            "void main() {\n"
+            //"	vec4 texcolor = texture2D( t_image, vertex_coord );\n"
+            //" int layer =  int(vertex_id);\n"
+            " float ffmaterial = floor(vertex_material + 0.5);\n"
+            " int layer =  int(ffmaterial);\n"
+            //" float ffid = fvertex_id*0.00001;\n"
+            "	vec4 texcolorA = texture( t_array, vec3(vertex_coord.s, vertex_coord.t, layer ) );\n"
+            //"	float intensity = 0.6+0.4*abs(max( 0.0, dot( v_normal, -1.0*a_light )) );\n"
+            //"	float intensity = 1.0;\n"
+            //" if (vertex_coord.s<0.0 || vertex_coord.s>1.0 || vertex_coord.t<0.0 || vertex_coord.t>1.0 ) texcolor = vec4( 0,0,0,0);\n"
+            //"	vec4 mulcolor = intensity*vec4( 1.0*vertex_color.r, 1.0*vertex_color.g, 1.0*vertex_color.b, 1.0*vertex_color.a );\n"
+            "	gl_FragColor = vec4( texcolorA.r*vertex_color.r, texcolorA.g*vertex_color.g, texcolorA.b*vertex_color.b, vertex_color.a*texcolorA.a);\n"
+            //"	gl_FragColor = vec4( vertex_id*0.1, texcolorA.g*vertex_color.g, texcolorA.b*vertex_color.b, vertex_color.a*texcolorA.a);\n"
+            //"	gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0);\n"
+            //"	gl_FragColor = vec4( vertex_color.r, vertex_color.g, vertex_color.b, 1.0);\n"
+            "}\n"
+            )
+            ,
+            moText(
+            "#version 330\n"
+            "layout(points) in;\n"
+            "layout(triangle_strip, max_vertices = 16) out;\n"
+            //"layout(points, max_vertices = 2) out;\n"
+            //"layout(line_strip, max_vertices = 4) out;\n"
+            //"uniform mat4 projmatrix;\n"
+            "in mat4 pmatrix[];\n"
+            "in VertexAttrib {\n"
+            //" vec2 texcoord;\n"
+            " vec4 color;\n"
+            " vec4 position;\n"
+            " vec4 scale;\n"
+            " float ffvid;\n"
+            " float material;\n"
+            //" int vid;\n"
+            " vec4 orientation;\n"
+            //" vec4 normal;\n"
+            "} vertex[];\n"
+            "out vec4 vertex_color;\n"
+            "out vec2 vertex_coord;\n"
+            "out float vertex_id;\n"
+            "out float vertex_material;\n"
+            //"out vec4 vertex_normal;\n"
+            "\n"
+            ""
+            "mat4 build_transform(vec3 pos, vec3 ang) {\n"
+            " float cosX = cos(ang.x);float sinX = sin(ang.x);\n"
+            " float cosY = cos(ang.y);float sinY = sin(ang.y);\n"
+            " float cosZ = cos(ang.z);\n"
+            " float sinZ = sin(ang.z);\n"
+            " mat4 m;\n"
+            " float m00 = cosY * cosZ + sinX * sinY * sinZ;\n"
+            " float m01 = cosY * sinZ - sinX * sinY * cosZ;\n"
+            " float m02 = cosX * sinY;\n"
+            " float m03 = 0.0;\n"
+            " float m04 = -cosX * sinZ;\n"
+            " float m05 = cosX * cosZ;\n"
+            " float m06 = sinX;\n"
+            " float m07 = 0.0;\n"
+            " float m08 = sinX * cosY * sinZ - sinY * cosZ;\n"
+            " float m09 = -sinY * sinZ - sinX * cosY * cosZ;\n"
+            " float m10 = cosX * cosY;\n"
+            " float m11 = 0.0;\n"
+            " float m12 = pos.x;\n"
+            " float m13 = pos.y;\n"
+            " float m14 = pos.z;\n"
+            " float m15 = 1.0;\n"
+///------ Orientation ---------------------------------
+            " m[0][0] = m00; // first entry of the first column.\n"
+            " m[0][1] = m01; // second entry of the first column.\n"
+            " m[0][2] = m02;\n"
+            " m[0][3] = m03;\n"
+
+            " m[1][0] = m04; // first entry of the second column.\n"
+            " m[1][1] = m05; // second entry of the second column.\n"
+            " m[1][2] = m06;\n"
+            " m[1][3] = m07;\n"
+
+            " m[2][0] = m08; // first entry of the third column.\n"
+            " m[2][1] = m09; // second entry of the third column.\n"
+            " m[2][2] = m10;\n"
+            " m[2][3] = m11;\n"
+
+  ///------ Position ------------------------------------
+  " m[3][0] = m12; // first entry of the fourth column.\n"
+  " m[3][1] = m13; // second entry of the fourth column.\n"
+  " m[3][2] = m14;\n"
+  " m[3][3] = m15;\n"
+
+  " return m;\n"
+  "}\n"
+            "void main() {\n"
+            " float ffid = mod( vertex[0].ffvid, 30.0 );\n"
+            " float fmaterial = vertex[0].material;\n"
+            " float sx = vertex[0].scale.x*0.5;\n"
+            " float sy = vertex[0].scale.y*0.5;\n"
+            " mat4 mOri = build_transform( vec3(0.0,0.0,0.0), vertex[0].orientation.xyz*(3.141516/180.0) );\n"
+            //" float fmaterial = ffid;\n"
+            //" gl_Position = pmatrix[0] * gl_in[0].gl_Position;\n"
+            //" gl_Position = gl_in[0].gl_Position+vec4(0.0, -0.000001, 0.0, 0.0);\n"
+            //" gl_Position = pmatrix[0] * ( gl_in[0].gl_Position*0.000000001 + vec4(0.0, 0.00000000000001, 0.0, 0.0 ));\n"
+            " gl_Position = pmatrix[0] * (vertex[0].position + mOri*vec4( -sx, sy, 0.0, 0.0 ));\n"
+            //" gl_Position = pmatrix[0] * ( vec4(0.0, 0.001, 0.0, 0.0 ));\n"
+            //" vertex_coord = vertex[0].texcoord;\n"
+            " vertex_color = vertex[0].color;\n"
+            " vertex_coord = vec2( 0.0, 0.0);\n"
+            " vertex_id = ffid;\n"
+            " vertex_material = fmaterial;\n"
+            //" vertex_color = vertex[0].color;\n"
+            //" vertex_color = vec4(0.5,0.5,1.0,1.0);\n"
+            //" vertex_normal = vertex[0].normal;\n"
+            " EmitVertex();\n"
+            //" gl_Position = gl_in[1].gl_Position;\n"
+            //" gl_Position = pmatrix[0]*gl_in[0].gl_Position;\n"
+            //" vertex_coord = vertex[1].texcoord;\n"
+            //" gl_Position = pmatrix[0] * ( gl_in[0].gl_Position*0.000000001 + vec4(-0.00000000000001, -0.00000000000001, 0.0, 0.0 ));\n"
+            " gl_Position = pmatrix[0] * (vertex[0].position + mOri * vec4( -sx, -sy, 0.0, 0.0 ) );\n"
+            //" gl_Position = pmatrix[0] * ( vec4(-1, -1, 0.0, 0.0 ));\n"
+            " vertex_coord = vec2( 0.0, 1.0);\n"
+            //" vertex_color = vertex[1].color;\n"
+            " vertex_color = vertex[0].color;\n"
+            " vertex_id = ffid;\n"
+            " vertex_material = fmaterial;\n"
+            //" vertex_color = vec4(1.0,0.5,0.5,1.0);\n"
+            //" vertex_normal = vertex[0].normal;\n"
+            " EmitVertex();\n"
+            //" gl_Position = pmatrix[0]*gl_in[0].gl_Position;\n"
+            //" gl_Position = gl_in[0].gl_Position+vec4(-0.000001, 0.0, 0.0, 0.0);\n"
+            //" vertex_coord = vertex[2].texcoord;\n"
+            " gl_Position = pmatrix[0] * (vertex[0].position + mOri * vec4( sx, sy, 0.0, 0.0 ) );\n"
+            //" gl_Position = pmatrix[0] * ( gl_in[0].gl_Position*0.000000001 + vec4(0.00000000000001, -0.00000000000001, 0.0, 0.0 ));\n"
+            //" gl_Position = pmatrix[0] * ( vec4( 1, -1, 0.0, 0.0 ));\n"
+            " vertex_coord = vec2( 1.0, 0.0);\n"
+            //" vertex_color = vertex[2].color;\n"
+            //" vertex_color = vec4(0.5,1.0,0.5,1.0);\n"
+            " vertex_color = vertex[0].color;\n"
+            " vertex_id = ffid;\n"
+            " vertex_material = fmaterial;\n"
+            //" vertex_normal = vertex[0].normal;\n"
+            " EmitVertex();\n"
+            " gl_Position = pmatrix[0] * (vertex[0].position + mOri * vec4( sx, -sy, 0.0, 0.0 ));\n"
+            //" gl_Position = pmatrix[0] * ( vec4(0.0, 0.001, 0.0, 0.0 ));\n"
+            //" vertex_coord = vertex[0].texcoord;\n"
+            //" vertex_color = vertex[0].color;\n"
+            " vertex_coord = vec2( 1.0, 1.0);\n"
+            " vertex_color = vertex[0].color;\n"
+            " vertex_id = ffid;\n"
+            " vertex_material = fmaterial;\n"
+            //" vertex_color = vec4(0.5,0.5,1.0,1.0);\n"
+            //" vertex_normal = vertex[0].normal;\n"
+            " EmitVertex();\n"
+            " EndPrimitive();\n"
+            "}\n"
+            )
+          );
+
+         m_RenderShader.PrintVertShaderLog();
+         m_RenderShader.PrintFragShaderLog();
+         m_RenderShader.PrintGeomShaderLog();
+
+
+
+         m_RenderShaderPositionIndex = m_RenderShader.GetAttribID(moText("position"));
+         m_RenderShaderColorsIndex = m_RenderShader.GetAttribID(moText("colors"));
+         m_RenderShaderScaleIndex = m_RenderShader.GetAttribID(moText("scale"));
+         m_RenderShaderOrientationIndex = m_RenderShader.GetAttribID(moText("orientation"));
+         //m_RenderShaderMaterialsIndex = m_RenderShader.GetAttribID(moText("materials"));
+
+         //m_RenderShaderTexCoordIndex = m_RenderShader.GetAttribID(moText("t_coord"));
+         //m_RenderShaderNormalIndex = m_RenderShader.GetAttribID(moText("orientation"));
+
+         m_RenderShaderColorIndex = m_RenderShader.GetUniformID(moText("color"));
+         m_RenderShaderScaleVIndex = m_RenderShader.GetUniformID(moText("scalev"));
+         m_RenderShaderOpacityIndex = m_RenderShader.GetUniformID(moText("opacity"));
+         //m_RenderShaderTextureIndex = m_RenderShader.GetUniformID(moText("t_image"));
+         m_RenderShaderTextureArrayIndex = m_RenderShader.GetUniformID(moText("t_array"));
+         m_RenderShaderCellMemIndex = m_RenderShader.GetUniformID(moText("t_cellmem"));
+         m_RenderShaderProjectionMatrixIndex = m_RenderShader.GetUniformID("projmatrix");
+         //m_RenderShaderLightIndex = m_RenderShader.GetUniformID(moText("a_light"));
+
+         m_RenderShaderColsIndex = m_RenderShader.GetUniformID(moText("mcols"));
+        m_RenderShaderRowsIndex = m_RenderShader.GetUniformID(moText("mrows"));
+
+
+         MODebug2->Message(moText(
+
+                            "moShaderManager::Init > m_RenderShader Attrib IDs,"
+                            " position:"+IntToStr(m_RenderShaderPositionIndex)+""
+                            " scale:"+IntToStr(m_RenderShaderScaleIndex)+""
+                            " orientation:"+IntToStr(m_RenderShaderOrientationIndex)+""
+                            " colors:"+IntToStr(m_RenderShaderColorsIndex)+""
+                            //" materials:"+IntToStr(m_RenderShaderMaterialsIndex)+""
+
+                            //" t_coord:"+IntToStr(m_RenderShaderTexCoordIndex)+""
+
+                            ));
+
+         MODebug2->Message( moText(
+                            "moShaderManager::Init > m_RenderShader Uniform IDs,"
+                            " color:"+IntToStr(m_RenderShaderColorIndex)+""
+                            " opacity:"+IntToStr(m_RenderShaderOpacityIndex)+""
+                            " scalev:"+IntToStr(m_RenderShaderScaleVIndex)+""
+                            " projmatrix:"+IntToStr(m_RenderShaderProjectionMatrixIndex)+""
+                            //+moText(" a_light:")+IntToStr(m_RenderShaderLightIndex)
+                            //" t_image:"+IntToStr(m_RenderShaderTextureIndex)+""
+                            " t_array:"+IntToStr(m_RenderShaderTextureArrayIndex)+""
+                            " t_cellmem:"+IntToStr(m_RenderShaderCellMemIndex)+""
+                            ));
+    }
 }
 
 void moEffectParticlesFractal::Regenerate() {
@@ -2279,14 +2975,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
   glPushMatrix();
 
 
-  if (texture_mode==PARTICLES_TEXTUREMODE_MANY2PATCH) {
-    m_pTexBuf = m_Config[moR(PARTICLES_FOLDERS)][MO_SELECTED][0].TextureBuffer();
-    if (m_pTexBuf) {
-        m_nImages = m_pTexBuf->GetImagesProcessed();
-    }
-  } else {
-    m_pTexBuf = NULL;
-  }
+
 
 
 
@@ -2304,9 +2993,9 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
           float y = posArray[ijoff + 1];
           float z = posArray[ijoff + 2];
 
-          float sx = scaleArray[ijoff];
-          float sy = scaleArray[ijoff + 1];
-          float sz = scaleArray[ijoff + 2];
+          float ssx = scaleArray[ijoff];
+          float ssy = scaleArray[ijoff + 1];
+          float ssz = scaleArray[ijoff + 2];
 
           float rx = orientationArray[ijoff];
           float ry = orientationArray[ijoff + 1];
@@ -2421,9 +3110,9 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
             glRotatef(  rx, V.X(), V.Y(), V.Z() );
             glRotatef(  ry, W.X(), W.Y(), W.Z() );
 
-            sx = sx*scalex;
-            sy = sy*scaley;
-            sz = sz*scalez;
+            ssx = ssx*scalex;
+            ssy = ssy*scaley;
+            ssz = ssz*scalez;
             if (m_pTexBuf) {
                 int irandom = int( float(m_nImages-1) * g );
                 if (imaterial>=0) irandom = imaterial;
@@ -2457,6 +3146,221 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
   glPopMatrix();
   glEnable(GL_TEXTURE_2D);
 }
+
+
+void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEffectState* parentstate ) {
+
+  //DrawParticlesFractal( tempogral, parentstate );
+  float scalex = m_Config.Eval( moR(PARTICLES_SCALEX_PARTICLE) );
+  float scaley = m_Config.Eval( moR(PARTICLES_SCALEY_PARTICLE) );
+  float scalez = m_Config.Eval( moR(PARTICLES_SCALEZ_PARTICLE) );
+  float sizex = 1.0 * m_Physics.m_EmitterSize.X() / (1.0+abs(m_rows));
+  float sizey = 1.0 * m_Physics.m_EmitterSize.Y() / (1.0+abs(m_cols));
+  float sizez = 0.08f;
+  float alpha = m_EffectState.alpha*m_Config.Eval( moR(PARTICLES_ALPHA) );
+
+  if (!(quadsArray && posArray))
+    return;
+/**
+  for (int i = 0; i < m_cols; i++) {
+    int ioff = i * 4;
+    int iqindex = i * 16; //4 vertices of 4 floats, last value is for: w: index 0,1,2,3
+    for (int j = 0; j < m_rows; j++)
+    {
+      int joff = j * m_cols * 4;
+      int jqindex = j * m_cols * 16;
+      int ijoff = ioff+joff;
+      int ijqindex = iqindex + jqindex;
+      int ijt = ijoff*6;
+      float w = posArray[ijoff + 3];
+
+      //materialArray[ijoff] = cellmemoryArray[ i*4*m_cellmem+j*4*m_cellmem*m_cellmem*m_cols  ];
+
+      if (w>0.0) {
+        //float x = posArray[ijoff];
+        //float y = posArray[ijoff + 1];
+        //float z = posArray[ijoff + 2];
+
+        //float psx = scalex*scaleArray[ijoff];
+        //float psy = scaley*scaleArray[ijoff + 1];
+        //float psz = scalez*scaleArray[ijoff + 2];
+
+        //float rx = orientationArray[ijoff];
+        //float ry = orientationArray[ijoff + 1];
+        //float rz = orientationArray[ijoff + 2];
+
+      }
+    }
+  }
+*/
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+
+    ///MATERIAL
+    moMaterial Mat;
+      Mat.m_Map = pTMan->GetTexture( m_Config.Texture( moR(PARTICLES_TEXTURE)).GetMOId()  );//pTMan->GetTexture(pTMan->GetTextureMOId( "default", false ));
+      Mat.m_MapGLId = Mat.m_Map->GetGLId();
+      Mat.m_Color = moColor( 1.0, 1.0, 1.0 );
+      Mat.m_fTextWSegments = 13.0f;
+      Mat.m_fTextHSegments = 13.0f;
+      Mat.m_vLight = moVector3f( -1.0, -1.0, -1.0 );
+      Mat.m_vLight.Normalize();
+      //Mat.m_PolygonMode = MO_POLYGONMODE_LINE;
+      //Mat.m_PolygonMode = MO_POLYGONMODE_FILL;
+      Mat.m_PolygonMode = MO_POLYGONMODE_FILL;
+      Mat.m_fWireframeWidth = 0.0005f;
+      Mat.m_fOpacity = alpha;
+
+    ///PARTICLES
+    ///MESH MODEL (aka SCENE NODE)
+    moGLMatrixf Model;
+    Model.MakeIdentity().Translate(    0.0+tx, 0.0+ty, tz )
+         .Rotate(   rz*moMathf::PI/180, 0.0, 0.0, 1.0 )
+         .Rotate(   ry*moMathf::PI/180, 0.0, 1.0, 0.0 )
+         .Rotate(   rx*moMathf::PI/180, 1.0, 0.0, 0.0 )
+         .Scale( sx, sy, sz  );
+         //.Translate(    0.0, 0.0, -10);
+//         .Translate(    0.0, 0.0, -2.618 + 0.618*1.0 );
+
+    //moMesh Mesh( Sphere, Mat );
+    //Mesh.SetModelMatrix(Model);
+
+    ///CAMERA PERSPECTIVE
+    moCamera3D Camera3D;
+    if (pGLMan) {
+     pGLMan->SetDefaultPerspectiveView( w, h );
+     pGLMan->LookAt(m_Physics.m_EyeVector.X(),
+                            m_Physics.m_EyeVector.Y(),
+                            m_Physics.m_EyeVector.Z(),
+                            m_Physics.m_TargetViewVector.X(),
+                            m_Physics.m_TargetViewVector.Y(),
+                            m_Physics.m_TargetViewVector.Z(),
+                            m_Physics.m_UpViewVector.X(),
+                            m_Physics.m_UpViewVector.Y(),
+                            m_Physics.m_UpViewVector.Z());
+    }
+    Camera3D = pGLMan->GetProjectionMatrix();
+    long ttime = 8000;
+  if (m_EffectState.tempo.Duration()<ttime) {
+    MODebug2->Message("Time:" + IntToStr(m_EffectState.tempo.Duration()) );
+  }
+  if (m_RenderShader.Initialized() && m_EffectState.tempo.Duration()>ttime) {
+
+    m_RenderShader.StartShader();
+
+    moGLMatrixf& PMatrix( Camera3D );
+    const moGLMatrixf& MMatrix( Model );
+    moGLMatrixf Result;
+    Result = MMatrix*PMatrix;
+
+
+    //moGeometry& Geo( Sphere );
+    //const moFaceArray& Faces(Geo.GetFaces());
+    //const moVertexArray& Vertices(Geo.GetVertices());
+    //const float* Gpx = Geo.GetVerticesBuffer();
+    //const float* Gcx = Geo.GetColorBuffer();
+    //const float* Gtx = Geo.GetVerticesUVBuffer();
+    //const float* Gnx = Geo.GetNormalsBuffer();
+
+    //int facesCount = Faces.Count();
+
+    const float *pfv = Result.GetPointer();
+    //MODebug2->Message( "Result:\n"+Result.ToJSON() );
+    //MODebug2->Message( "facesCount:\n"+IntToStr(facesCount) );
+
+    moTexture* pMap = Mat.m_Map;
+    if (pMap) {
+        //int Tglid = pMap->GetGLId();
+        glPointSize(3.0);
+        glEnable( GL_TEXTURE_2D );
+        glActiveTexture( GL_TEXTURE0 );///ACTIVATE TEXTURE UNIT 0
+        glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
+        //MODebug2->Message( "Tglid:\n"+IntToStr(Tglid) );
+    }
+
+    glUniformMatrix4fv( m_RenderShaderProjectionMatrixIndex, 1, GL_FALSE, pfv );
+    //glUniform1i( m_RenderShaderTextureIndex, 0 );///Pass TEXTURE UNIT 0 (use glActiveTexture and glBindTexture )
+    glActiveTexture( GL_TEXTURE0 + 5);
+    glBindTexture( GL_TEXTURE_2D, 0);
+    glBindTexture( GL_TEXTURE_2D_ARRAY, m_texture_array );
+    glUniform1i( m_RenderShaderTextureArrayIndex, 5 );
+    //MODebug2->Message( "m_texture_array:\n"+IntToStr(m_texture_array) );
+
+    glActiveTexture( GL_TEXTURE0 + 6);
+    glBindTexture( GL_TEXTURE_2D, m_pCellMemoryTextureFinal->GetGLId());
+    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+    glUniform1i( m_RenderShaderCellMemIndex, 6 );
+
+    //glUniform1i( m_RenderShaderColsIndex, m_cols );
+    //glUniform1i( m_RenderShaderRowsIndex, m_rows );
+    //glUniform1f( m_EmitterShaderWireframeWidthIndex, Mat.m_fWireframeWidth );
+    //glUniform1f( m_EmitterShaderTexWSegmentsIndex, Mat.m_fTextWSegments );
+    //glUniform1f( m_EmitterShaderTexHSegmentsIndex, Mat.m_fTextHSegments );
+    glUniform3fv( m_RenderShaderLightIndex, 1, &Mat.m_vLight[0] );
+    glUniform3fv( m_RenderShaderColorIndex, 1, &Mat.m_Color[0] );
+    glUniform1f( m_RenderShaderOpacityIndex, Mat.m_fOpacity );
+
+    glUniform1iARB( m_RenderShaderColsIndex, m_cols );
+    glUniform1iARB( m_RenderShaderRowsIndex, m_rows );
+
+    moVector3f scalev( scalex*sizex, scaley*sizey, scalez*sizez);
+    glUniform3fv( m_RenderShaderScaleVIndex, 1, &scalev[0] );
+
+    glEnableVertexAttribArray( m_RenderShaderPositionIndex );
+    //glVertexAttribPointer( m_RenderShaderPositionIndex, 4, GL_FLOAT, false, 0, &trianglesArray[0] );  // Set data type and location.
+    glVertexAttribPointer( m_RenderShaderPositionIndex, 4, GL_FLOAT, false, 0, &posArray[0] );  // Set data type and location.
+
+    glEnableVertexAttribArray( m_RenderShaderColorsIndex );
+    //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
+    glVertexAttribPointer( m_RenderShaderColorsIndex, 4, GL_FLOAT, false, 0, &colorArray[0] );
+
+    glEnableVertexAttribArray( m_RenderShaderScaleIndex );
+    glVertexAttribPointer( m_RenderShaderScaleIndex, 4, GL_FLOAT, false, 0, &scaleArray[0] );
+
+    //glEnableVertexAttribArray( m_RenderShaderMaterialsIndex );
+    //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
+    //glVertexAttribPointer( m_RenderShaderMaterialsIndex, 4, GL_FLOAT, false, 0, &materialArray[0] );
+
+    //glEnableVertexAttribArray( m_RenderShaderNormalIndex );
+    //glVertexAttribPointer( m_RenderShaderNormalIndex, 4, GL_FLOAT, false, 0, &orientationArray[0] );
+    glEnableVertexAttribArray( m_RenderShaderOrientationIndex );
+    glVertexAttribPointer( m_RenderShaderOrientationIndex, 4, GL_FLOAT, false, 0, &orientationArray[0] );
+
+
+    //glEnableVertexAttribArray( m_RenderShaderTexCoordIndex );
+    //glVertexAttribPointer( m_RenderShaderTexCoordIndex, 2, GL_FLOAT, false, 0, &trianglesCoordArray[0] );  // Set data type and location.
+
+    //glEnableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+    //glVertexAttribPointer( m_EmitterShaderTexCoordEdgeIndex, 2, GL_FLOAT, false, 0, &Gtx[0] );  // Set data type and location.
+    //int vertexCount = p_src.m_Geometry.GetVertices().Count();
+    //int facesCount = p_src.m_Geometry.GetFaces().Count();
+
+
+    //glDrawArrays( GL_TRIANGLES, 0, 3*m_cols*m_rows );
+    glDrawArrays( GL_POINTS, 0, m_cols*m_rows );
+
+    //glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, &);
+
+    glDisableVertexAttribArray( m_RenderShaderPositionIndex );
+    glDisableVertexAttribArray( m_RenderShaderColorsIndex );
+    glDisableVertexAttribArray( m_RenderShaderScaleIndex );
+    //glDisableVertexAttribArray( m_RenderShaderNormalIndex );
+    //glDisableVertexAttribArray( m_RenderShaderTexCoordIndex );
+    //glDisableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+
+    m_RenderShader.StopShader();
+
+  }
+
+}
+
+
+
+
+
+
+
+
 #ifdef USE_TUIO
 using namespace TUIO;
 #endif
@@ -2469,8 +3373,8 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
 {
 
     int ancho,alto;
-    int w = m_pResourceManager->GetRenderMan()->ScreenWidth();
-    int h = m_pResourceManager->GetRenderMan()->ScreenHeight();
+    w = m_pResourceManager->GetRenderMan()->ScreenWidth();
+    h = m_pResourceManager->GetRenderMan()->ScreenHeight();
     frame++;
     moFont* pFont = m_Config[moR(PARTICLES_FONT)].GetData()->Font();
 
@@ -2528,6 +3432,8 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
 
 
     rz = m_Config.Eval( moR(PARTICLES_ROTATEZ));
+    ry = m_Config.Eval( moR(PARTICLES_ROTATEY));
+    rx = m_Config.Eval( moR(PARTICLES_ROTATEX));
 
     sx = m_Config.Eval( moR(PARTICLES_SCALEX));
     sy = m_Config.Eval( moR(PARTICLES_SCALEY));
@@ -2545,8 +3451,8 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
 
     //rotation
     glRotatef(  rz, 0.0, 0.0, 1.0 );
-    glRotatef(  m_Config.Eval( moR(PARTICLES_ROTATEY)), 0.0, 1.0, 0.0 );
-    glRotatef(  m_Config.Eval( moR(PARTICLES_ROTATEX)), 1.0, 0.0, 0.0 );
+    glRotatef(  ry, 0.0, 1.0, 0.0 );
+    glRotatef(  rx, 1.0, 0.0, 0.0 );
 
 
 
@@ -2583,8 +3489,13 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
       glVertex2f( -0.5,  0.5);
     glEnd();*/
 
-    DrawParticlesFractal( tempogral, parentstate );
-/*
+    if (g_fVBOSupported) {
+        //DrawParticlesFractal( tempogral, parentstate );
+        DrawParticlesFractalVBO( tempogral, parentstate );
+    } else {
+        DrawParticlesFractal( tempogral, parentstate );
+    }
+    /*
   // Set Pointers To Our Data
   if( g_fVBOSupported )
   {
@@ -2877,6 +3788,7 @@ void moEffectParticlesFractal::RegisterFunctions()
     RegisterFunction("WriteMemory");//33
     RegisterFunction("ReadMemory");//34
     RegisterFunction("DumpMemory");//35
+    RegisterFunction("LoadMemory");//36
 
 /*
     // 05: yellow 01
@@ -3045,6 +3957,9 @@ switch (iFunctionNumber - m_iMethodBase)
         case 35:
             ResetScriptCalling();
             return luaDumpMemory(vm);
+        case 36:
+            ResetScriptCalling();
+            return luaLoadMemory(vm);
         /*case 29:
             ResetScriptCalling();
             return luaCellRotate(vm);
@@ -3184,6 +4099,7 @@ int moEffectParticlesFractal::luaCellEndProgram(moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position_end] = -1.0;
         m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
         m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+
     }
     return 0;
 }
@@ -3239,9 +4155,9 @@ int moEffectParticlesFractal::luaWriteMemory(moLuaVirtualMachine& vm) {
     lua_id_cell = (MOint) lua_tonumber (state, 1);
     long lua_id_cell_mem_pos = (MOint) lua_tonumber (state, 2);
     float lua_id_cell_mem_val = (MOfloat) lua_tonumber (state, 3);
-    MODebug2->Message( moText("WriteMemory: ") + IntToStr(lua_id_cell)
-                        + moText(" Mem Pos:") + IntToStr(lua_id_cell_mem_pos)
-                        + moText(" Mem Val:") + FloatToStr(lua_id_cell_mem_val) );
+    //MODebug2->Message( moText("WriteMemory: ") + IntToStr(lua_id_cell)
+    //                    + moText(" Mem Pos:") + IntToStr(lua_id_cell_mem_pos)
+    //                    + moText(" Mem Val:") + FloatToStr(lua_id_cell_mem_val) );
 
     ///put one 0 pixel at id_cell position?
     if (cellmemoryArray && m_pCellMemoryTexture && m_pCellMemoryTextureSwap) {
@@ -3250,17 +4166,26 @@ int moEffectParticlesFractal::luaWriteMemory(moLuaVirtualMachine& vm) {
         cell_position_i = lua_id_cell - cell_position_j*m_cols;
         //long memj = lua_id_cell_mem_pos / (4*m_cellmem);
         //long memi = lua_id_cell_mem_pos - memj* (4*m_cellmem);
-        cell_position = cell_position_i*4*m_cellmem + cell_position_j*4*m_cellmem*m_cellmem*m_cols;
+        cell_position = cell_position_i*4*m_cellmem + cell_position_j*4*m_cellmem*(m_cellmem*m_cols);
 
         cellmemoryArray[cell_position+lua_id_cell_mem_pos] = lua_id_cell_mem_val;
 
-        m_pCellMemoryTexture->BuildFromBuffer(m_pCellMemoryTexture->GetWidth(),m_pCellMemoryTexture->GetHeight(), cellmemoryArray, GL_RGBA, GL_FLOAT);
-        m_pCellMemoryTextureSwap->BuildFromBuffer(m_pCellMemoryTextureSwap->GetWidth(),m_pCellMemoryTextureSwap->GetHeight(), cellmemoryArray, GL_RGBA, GL_FLOAT);
     }
 
     lua_pushnumber(state, (lua_Number) 1 );
 
     return 1;
+}
+
+int moEffectParticlesFractal::luaLoadMemory(moLuaVirtualMachine& vm) {
+
+    lua_State *state = (lua_State *) vm;
+
+    if( cellmemoryArray && m_pCellMemoryTexture && m_pCellMemoryTextureSwap) {
+        m_pCellMemoryTexture->BuildFromBuffer(m_pCellMemoryTexture->GetWidth(),m_pCellMemoryTexture->GetHeight(), cellmemoryArray, GL_RGBA, GL_FLOAT);
+        m_pCellMemoryTextureSwap->BuildFromBuffer(m_pCellMemoryTextureSwap->GetWidth(),m_pCellMemoryTextureSwap->GetHeight(), cellmemoryArray, GL_RGBA, GL_FLOAT);
+    }
+    return 0;
 }
 
 int moEffectParticlesFractal::luaDumpMemory(moLuaVirtualMachine& vm) {
@@ -3273,7 +4198,7 @@ int moEffectParticlesFractal::luaDumpMemory(moLuaVirtualMachine& vm) {
 
         cell_position_j = lua_id_cell / m_cols;
         cell_position_i = lua_id_cell - cell_position_j*m_cols;
-        cell_position = cell_position_i*4*m_cellmem + cell_position_j*4*m_cellmem*m_cellmem*m_cols;
+        cell_position = cell_position_i*4*m_cellmem + cell_position_j*4*m_cellmem*(m_cellmem*m_cols);
 
         moText fname = m_pResourceManager->GetDataMan()->GetDataPath()+moSlash+"cellmem";
         m_pCellMemoryTextureFinal->CreateThumbnail("PNGA", m_pCellMemoryTexture->GetWidth(), m_pCellMemoryTexture->GetHeight(), fname);

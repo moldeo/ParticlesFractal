@@ -124,6 +124,7 @@ moEffectParticlesFractal::moEffectParticlesFractal() {
   m_pPositionTextureSwap = NULL;
   m_pPositionTextureFinal = NULL;
   m_bPositionTextureSwapOn = false;
+  m_pTFilter_PositionMediumIndex = -1;
 
 	m_pTFilter_VelocityTexture = NULL;
 	m_pVelocityTexture = NULL;
@@ -167,11 +168,20 @@ moEffectParticlesFractal::moEffectParticlesFractal() {
   m_pCellMemoryTextureFinal = NULL;
   m_bCellMemoryTextureSwapOn = false;
 
+  m_pTFilter_NormalTexture = NULL;
+	m_pNormalTexture = NULL;
+  m_pTFilter_NormalTextureSwap = NULL;
+  m_pNormalTextureSwap = NULL;
+  m_pNormalTextureFinal = NULL;
+  m_bNormalTextureSwapOn = false;
+
+
   posArray = NULL;
   scaleArray = NULL;
   orientationArray = NULL;
   stateArray = NULL;
   colorArray = NULL;
+  normalArray = NULL;
   materialArray = NULL;
 
   quadsArray = NULL;
@@ -239,8 +249,8 @@ moEffectParticlesFractal::GetDefinition( moConfigDefinition *p_configdefinition 
 	p_configdefinition->Add( moText("texture_mode"), MO_PARAM_NUMERIC, PARTICLES_TEXTUREMODE, moValue( "0", "NUM"), moText("UNIT,PATCH,MANY,MANY2PATCH,MANYBYORDER"));
 
 	p_configdefinition->Add( moText("blending"), MO_PARAM_BLENDING, PARTICLES_BLENDING, moValue( "0", "NUM") );
-	p_configdefinition->Add( moText("width"), MO_PARAM_NUMERIC, PARTICLES_WIDTH, moValue( "16", "NUM") );
-	p_configdefinition->Add( moText("height"), MO_PARAM_NUMERIC, PARTICLES_HEIGHT, moValue( "16", "NUM") );
+	p_configdefinition->Add( moText("width"), MO_PARAM_FUNCTION, PARTICLES_WIDTH, moValue( "16", "FUNCTION").Ref() );
+	p_configdefinition->Add( moText("height"), MO_PARAM_FUNCTION, PARTICLES_HEIGHT, moValue( "16", "FUNCTION").Ref() );
 	p_configdefinition->Add( moText("memory"), MO_PARAM_NUMERIC, PARTICLES_MEMORY, moValue( "4", "NUM") );
 	p_configdefinition->Add( moText("code"), MO_PARAM_NUMERIC, PARTICLES_CODE, moValue( "4", "NUM") );
 
@@ -274,7 +284,7 @@ moEffectParticlesFractal::GetDefinition( moConfigDefinition *p_configdefinition 
 	p_configdefinition->Add( moText("attractorvectory"), MO_PARAM_FUNCTION, PARTICLES_ATTRACTORVECTOR_Y, moValue( "0", "FUNCTION").Ref() );
 	p_configdefinition->Add( moText("attractorvectorz"), MO_PARAM_FUNCTION, PARTICLES_ATTRACTORVECTOR_Z, moValue( "0", "FUNCTION").Ref() );
 
-	p_configdefinition->Add( moText("emittertype"), MO_PARAM_NUMERIC, PARTICLES_EMITTERTYPE, moValue( "0", "NUM").Ref(), moText("GRID,SPHERE,TUBE,JET,POINT,TRACKER,TRACKER2,SPIRAL,CIRCLE") );
+	p_configdefinition->Add( moText("emittertype"), MO_PARAM_NUMERIC, PARTICLES_EMITTERTYPE, moValue( "0", "NUM").Ref(), moText("GRID,SPHERE,TUBE,JET,POINT,TRACKER,TRACKER2,SPIRAL,CIRCLE,TREE") );
 	p_configdefinition->Add( moText("emittervectorx"), MO_PARAM_FUNCTION, PARTICLES_EMITTERVECTOR_X, moValue( "0", "FUNCTION").Ref() );
 	p_configdefinition->Add( moText("emittervectory"), MO_PARAM_FUNCTION, PARTICLES_EMITTERVECTOR_Y, moValue( "0", "FUNCTION").Ref() );
 	p_configdefinition->Add( moText("emittervectorz"), MO_PARAM_FUNCTION, PARTICLES_EMITTERVECTOR_Z, moValue( "0", "FUNCTION").Ref() );
@@ -330,14 +340,40 @@ p_configdefinition->Add( moText("upviewx"), MO_PARAM_FUNCTION, PARTICLES_UPVIEWX
 
 		p_configdefinition->Add( moText("random_color_function"), MO_PARAM_NUMERIC, PARTICLES_RANDOMCOLORFUNCTION, moValue( "0", "NUM").Ref(), moText("NONE,DEGRADE,OSCILLATE,RED,GREEN,BLUE,YELLOW") );
 		p_configdefinition->Add( moText("particles_separation"), MO_PARAM_FUNCTION, PARTICLES_SEPARATION, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_opacity"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_OPACITY, moValue( "1.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_off_x"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_OFF_X, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_off_y"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_OFF_Y, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_scale_x"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_SCALE_X, moValue( "1.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_scale_y"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_SCALE_Y, moValue( "1.0", "FUNCTION").Ref() );
+    p_configdefinition->Add( moText("texture_rotation"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_ROTATION, moValue( "0.0", "FUNCTION").Ref() );
+
+    p_configdefinition->Add( moText("texture_2"), MO_PARAM_TEXTURE, PARTICLES_TEXTURE_2, moValue( "default", "TXT") );
+    p_configdefinition->Add( moText("texture_2_mode"), MO_PARAM_NUMERIC, PARTICLES_TEXTURE_2_MODE, moValue( "0", "NUM").Ref(), moText("UNIT,PATCH,MANY,MANY2PATCH,MANYBYORDER"));
+    p_configdefinition->Add( moText("texture_2_opacity"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_2_OPACITY, moValue( "1.0", "FUNCTION").Ref());
+		p_configdefinition->Add( moText("texture_2_off_x"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_2_OFF_X, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_2_off_y"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_2_OFF_Y, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_2_scale_x"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_2_SCALE_X, moValue( "1.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("texture_2_scale_y"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_2_SCALE_Y, moValue( "1.0", "FUNCTION").Ref() );
+    p_configdefinition->Add( moText("texture_2_rotation"), MO_PARAM_FUNCTION, PARTICLES_TEXTURE_2_ROTATION, moValue( "0.0", "FUNCTION").Ref() );
 
 	/*
 		p_configdefinition->Add( moText("orderingmode"), MO_PARAM_NUMERIC, PARTICLES_ORDERING_MODE, moValue( "0", "NUM"), moText("NONE,ZDEPTHTEST,ZPOSITION,COMPLETE") );
+	*/
+
+		p_configdefinition->Add( moText("geometry_mode"), MO_PARAM_NUMERIC, PARTICLES_GEOMETRY_MODE, moValue( "0", "NUM").Ref(),
+		moText("POINT,LINE_STRIP,TRIANGLE_STRIP,QUADS,FEATHER,TETRA,TREE,CONE,VORONOI,INSTANCE"));
+		p_configdefinition->Add( moText("geometry_shader_off"), MO_PARAM_NUMERIC, PARTICLES_GEOMETRY_SHADER_OFF, moValue( "0", "NUM").Ref(), moText("FALSE,TRUE") );
+
+		p_configdefinition->Add( moText("feather_segments"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_SEGMENTS, moValue( "1.0", "FUNCTION").Ref());
+		p_configdefinition->Add( moText("feather_length"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_LENGTH, moValue( "1.0", "FUNCTION").Ref());
+		p_configdefinition->Add( moText("feather_head"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_HEAD, moValue( "1", "FUNCTION").Ref());
+		p_configdefinition->Add( moText("feather_dynamic"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_DYNAMIC, moValue( "0", "FUNCTION").Ref());
+
 	p_configdefinition->Add( moText("lightmode"), MO_PARAM_NUMERIC, PARTICLES_LIGHTMODE, moValue( "0", "NUM") );
 	p_configdefinition->Add( moText("lightx"), MO_PARAM_FUNCTION, PARTICLES_LIGHTX, moValue( "0.0", "FUNCTION").Ref() );
 	p_configdefinition->Add( moText("lighty"), MO_PARAM_FUNCTION, PARTICLES_LIGHTY, moValue( "4.0", "FUNCTION").Ref() );
 	p_configdefinition->Add( moText("lightz"), MO_PARAM_FUNCTION, PARTICLES_LIGHTZ, moValue( "0.0", "FUNCTION").Ref() );
-	*/
+
 	return p_configdefinition;
 }
 
@@ -456,13 +492,37 @@ moEffectParticlesFractal::Init()
 
     moDefineParamIndex( PARTICLES_RANDOMCOLORFUNCTION, moText("random_color_function") );
     moDefineParamIndex( PARTICLES_SEPARATION, moText("particles_separation") );
+    moDefineParamIndex( PARTICLES_TEXTURE_OPACITY, moText("texture_opacity") );
+    moDefineParamIndex( PARTICLES_TEXTURE_OFF_X, moText("texture_off_x") );
+    moDefineParamIndex( PARTICLES_TEXTURE_OFF_Y, moText("texture_off_y") );
+    moDefineParamIndex( PARTICLES_TEXTURE_SCALE_X, moText("texture_scale_x") );
+    moDefineParamIndex( PARTICLES_TEXTURE_SCALE_Y, moText("texture_scale_y") );
+    moDefineParamIndex( PARTICLES_TEXTURE_ROTATION, moText("texture_rotation") );
+
+    moDefineParamIndex( PARTICLES_TEXTURE_2, moText("texture_2") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_MODE, moText("texture_2_mode") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_OPACITY, moText("texture_2_opacity") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_OFF_X, moText("texture_2_off_x") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_OFF_Y, moText("texture_2_off_y") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_SCALE_X, moText("texture_2_scale_x") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_SCALE_Y, moText("texture_2_scale_y") );
+    moDefineParamIndex( PARTICLES_TEXTURE_2_ROTATION, moText("texture_2_rotation") );
 
     /*
     moDefineParamIndex( PARTICLES_ORDERING_MODE, moText("orderingmode") );
+   */
+
+    moDefineParamIndex( PARTICLES_GEOMETRY_MODE, moText("geometry_mode") );
+    moDefineParamIndex( PARTICLES_GEOMETRY_SHADER_OFF, moText("geometry_shader_off") );
+    moDefineParamIndex( PARTICLES_FEATHER_SEGMENTS, moText("feather_segments") );
+    moDefineParamIndex( PARTICLES_FEATHER_LENGTH, moText("feather_length") );
+    moDefineParamIndex( PARTICLES_FEATHER_DYNAMIC, moText("feather_dynamic") );
+    moDefineParamIndex( PARTICLES_FEATHER_HEAD, moText("feather_head") );
+
     moDefineParamIndex( PARTICLES_LIGHTMODE, moText("lightmode") );
     moDefineParamIndex( PARTICLES_LIGHTX, moText("lightx") );
     moDefineParamIndex( PARTICLES_LIGHTY, moText("lighty") );
-    moDefineParamIndex( PARTICLES_LIGHTZ, moText("lightz") );*/
+    moDefineParamIndex( PARTICLES_LIGHTZ, moText("lightz") );
 
     m_Physics.m_ParticleScript = moText("");
 
@@ -758,18 +818,37 @@ void moEffectParticlesFractal::UpdateDt() {
 void moEffectParticlesFractal::UpdateParameters() {
 
 
-    m_rows = m_Config.Int( moR(PARTICLES_WIDTH)  );
-    m_cols = m_Config.Int( moR(PARTICLES_HEIGHT)  );
+    m_rows = m_Config.Eval( moR(PARTICLES_WIDTH)  );
+    m_cols = m_Config.Eval( moR(PARTICLES_HEIGHT)  );
     m_cellmem = m_Config.Int( moR(PARTICLES_MEMORY)  );
     m_cellcode = m_Config.Int( moR(PARTICLES_CODE)  );
 
     m_MediumTextureLoadedName = m_Config.Texture( moR(PARTICLES_TEXTURE_MEDIUM)).GetName();
+    int moid = m_Config.Texture( moR(PARTICLES_TEXTURE_MEDIUM)).GetMOId();
+    if (moid>-1) {
+      m_pMediumTexture = m_pResourceManager->GetTextureMan()->GetTexture(moid);
+    }
+    if (
+    m_pTFilter_PositionTexture && m_pTFilter_PositionTextureSwap
+    && m_pTFilter_PositionMediumIndex>-1 && m_pMediumTexture) {
+      moTextureIndex* ptidx = m_pTFilter_PositionTexture->GetSrcTex();
+      if (ptidx) {
+        ptidx->SetTexture( m_pTFilter_PositionMediumIndex, m_pMediumTexture );
+      }
+      ptidx = m_pTFilter_PositionTextureSwap->GetSrcTex();
+      if (ptidx) {
+        ptidx->SetTexture( m_pTFilter_PositionMediumIndex, m_pMediumTexture );
+      }
+    }
     m_AltitudeTextureLoadedName = m_Config.Texture( moR(PARTICLES_TEXTURE_ALTITUDE)).GetName();
     m_VariabilityTextureLoadedName = m_Config.Texture( moR(PARTICLES_TEXTURE_VARIABILITY)).GetName();
     m_ConfidenceTextureLoadedName = m_Config.Texture( moR(PARTICLES_TEXTURE_CONFIDENCE)).GetName();
     //MODebug2->Message("m_MediumTextureLoadedName:"+m_MediumTextureLoadedName);
-
     ///create shader and destination texture
+
+
+
+
     if ( !m_pStateTexture ) {
 
       InitParticlesFractal(   m_rows,
@@ -802,6 +881,18 @@ void moEffectParticlesFractal::UpdateParameters() {
 
 
     }
+
+    geometry_shader_off = m_Config.Int(moR(PARTICLES_GEOMETRY_SHADER_OFF));
+
+
+    long geometry_mode_used = geometry_mode;
+    geometry_mode = m_Config.Int(moR(PARTICLES_GEOMETRY_MODE));
+    if (geometry_mode_used!=geometry_mode || !m_RenderShader.Initialized()) {
+      //reinit m_RenderShader
+      UpdateRenderShader();
+    }
+
+
 
 
     if (cellmemoryArray==NULL) {
@@ -906,6 +997,18 @@ void moEffectParticlesFractal::UpdateParameters() {
         //m_pTFilter_PositionTexture->Apply( &m_EffectState.tempo );
         m_pTFilter_PositionTexture->Apply( (moMoldeoObject*)(this), &m_EffectState.tempo );
         m_pPositionTextureFinal = m_pPositionTexture;
+    }
+
+    if ( m_bNormalTextureSwapOn && m_pTFilter_NormalTextureSwap ) {
+        m_bNormalTextureSwapOn = false;
+        //m_pTFilter_NormalTextureSwap->Apply( &m_EffectState.tempo );
+        m_pTFilter_NormalTextureSwap->Apply( (moMoldeoObject*)(this), &m_EffectState.tempo );
+        m_pNormalTextureFinal = m_pNormalTextureSwap;
+    } else if ( m_pTFilter_NormalTexture ) {
+        m_bNormalTextureSwapOn = true;
+        //m_pTFilter_PositionTexture->Apply( &m_EffectState.tempo );
+        m_pTFilter_NormalTexture->Apply( (moMoldeoObject*)(this), &m_EffectState.tempo );
+        m_pNormalTextureFinal = m_pNormalTexture;
     }
 
 
@@ -1058,6 +1161,26 @@ void moEffectParticlesFractal::UpdateParameters() {
       glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, scaleArray );
     }
 
+    if (normalArray==NULL) {
+      numParticles = m_rows * m_cols;
+      normalArray = new GLfloat[4 * numParticles]();
+      //materialArray = new GLfloat[4 * numParticles]();
+      MODebug2->Message("normalArray: " +  IntToStr(numParticles) );
+      //MODebug2->Message("materialArray: " +  IntToStr(numParticles) );
+    }
+
+    if (normalArray && m_pNormalTextureFinal) {
+      //MODebug2->Push("Reading pixels: " +  IntToStr(numParticles) );
+      //m_pPositionTextureFinal->GetFBO()->Bind();
+
+      //m_pPositionTextureFinal->GetFBO()->SetReadTexture( m_pPositionTextureFinal->GetGLId() );
+      //glReadPixels(0, 0, m_rows, m_cols, GL_RGBA, GL_FLOAT, posArray);
+      //m_pPositionTextureFinal->GetFBO()->Unbind();
+
+      glBindTexture( GL_TEXTURE_2D, m_pNormalTextureFinal->GetGLId() );
+      glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, normalArray );
+    }
+
     if (colorArray==NULL) {
       numParticles = m_rows * m_cols;
       colorArray = new GLfloat[4 * numParticles]();
@@ -1084,7 +1207,7 @@ void moEffectParticlesFractal::UpdateParameters() {
       MODebug2->Message("orientationArray: " +  IntToStr(numParticles) );
     }
 
-     if (orientationArray && m_pOrientationTextureFinal) {
+    if (orientationArray && m_pOrientationTextureFinal) {
       //MODebug2->Push("Reading pixels: " +  IntToStr(numParticles) );
       //m_pPositionTextureFinal->GetFBO()->Bind();
 
@@ -1279,6 +1402,7 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
 
     drawing_features = m_Config.Int( moR(PARTICLES_DRAWINGFEATURES));
     texture_mode = m_Config.Int( moR(PARTICLES_TEXTUREMODE));
+    texture_2_mode = m_Config.Int( moR(PARTICLES_TEXTURE_2_MODE));
 
     m_Physics.m_EyeVector = moVector3f(
                                         m_Config.Eval( moR(PARTICLES_EYEX)),
@@ -1297,14 +1421,14 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
                                         m_Config.Eval( moR(PARTICLES_UPVIEWY)),
                                         m_Config.Eval( moR(PARTICLES_UPVIEWZ))
                                        );
-/*
+
     m_Physics.m_SourceLighMode = (moParticlesSimpleLightMode) m_Config.Int( moR(PARTICLES_LIGHTMODE));
     m_Physics.m_SourceLightVector = moVector3f(
                                         m_Config.Eval( moR(PARTICLES_LIGHTX)),
                                         m_Config.Eval( moR(PARTICLES_LIGHTY)),
                                         m_Config.Eval( moR(PARTICLES_LIGHTZ))
                                        );
-*/
+
     m_Physics.gravitational = m_Config.Eval( moR(PARTICLES_GRAVITY));
     m_Physics.viscousdrag = m_Config.Eval( moR(PARTICLES_VISCOSITY));
 
@@ -1388,6 +1512,20 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
 
     random_color_function = m_Config.Eval(moR(PARTICLES_RANDOMCOLORFUNCTION));
     particles_separation = m_Config.Eval(moR(PARTICLES_SEPARATION));
+    texture_opacity = m_Config.Eval(moR(PARTICLES_TEXTURE_OPACITY));
+    texture_off_x = m_Config.Eval(moR(PARTICLES_TEXTURE_OFF_X));
+    texture_off_y = m_Config.Eval(moR(PARTICLES_TEXTURE_OFF_Y));
+    texture_scale_x = m_Config.Eval(moR(PARTICLES_TEXTURE_SCALE_X));
+    texture_scale_y = m_Config.Eval(moR(PARTICLES_TEXTURE_SCALE_Y));
+    texture_rotation  = m_Config.Eval(moR(PARTICLES_TEXTURE_ROTATION));
+
+    texture_2_opacity = m_Config.Eval(moR(PARTICLES_TEXTURE_2_OPACITY));
+    texture_2_off_x = m_Config.Eval(moR(PARTICLES_TEXTURE_2_OFF_X));
+    texture_2_off_y = m_Config.Eval(moR(PARTICLES_TEXTURE_2_OFF_Y));
+    texture_2_scale_x = m_Config.Eval(moR(PARTICLES_TEXTURE_2_SCALE_X));
+    texture_2_scale_y = m_Config.Eval(moR(PARTICLES_TEXTURE_2_SCALE_Y));
+    texture_2_rotation  = m_Config.Eval(moR(PARTICLES_TEXTURE_2_ROTATION));
+
 
     if (texture_mode==PARTICLES_TEXTUREMODE_MANY2PATCH) {
       m_pTexBuf = m_Config[moR(PARTICLES_FOLDERS)][MO_SELECTED][0].TextureBuffer();
@@ -1407,6 +1545,12 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
     } else {
       m_pTexBuf = NULL;
     }
+
+
+    feather_segments = m_Config.Eval(moR(PARTICLES_FEATHER_SEGMENTS));
+    feather_length =  m_Config.Eval(moR(PARTICLES_FEATHER_LENGTH));
+    feather_head =  m_Config.Eval(moR(PARTICLES_FEATHER_HEAD));
+    feather_dynamic =  m_Config.Eval(moR(PARTICLES_FEATHER_DYNAMIC));
 
 }
 
@@ -1913,12 +2057,34 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
       MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
   }
 
+
+  tName = "pf_scale_fx#"+this->GetLabelName()+"_";
+  Mid = TextureMan()->AddTexture( tName, p_cols, p_rows, tparam );
+  if (Mid>0) {
+      m_pScaleTexture = TextureMan()->GetTexture(Mid);
+      m_pScaleTexture->BuildEmpty( p_cols, p_rows );
+      MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " + strResolution);
+  } else {
+      MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
+  }
+
+  tName = "pf_scale_swap_fx#"+this->GetLabelName()+"_";
+  Mid = TextureMan()->AddTexture( tName, p_cols, p_rows, tparam );
+  if (Mid>0) {
+      m_pScaleTextureSwap = TextureMan()->GetTexture(Mid);
+      m_pScaleTextureSwap->BuildEmpty( p_cols, p_rows );
+      MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " + strResolution);
+  } else {
+      MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
+  }
+
 /// CREATE FILTER FOR CELL CODE CHANGES
   if ( !m_pTFilter_CellCodeTextureSwap ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add( m_pCellCodeTexture->GetName()
                       + moText(" ")+m_pCellMemoryTexture->GetName()
                       + " " + m_pStateTexture->GetName()
+
                       + " " + m_MediumTextureLoadedName/*Afecta el codigo ejecutado*/
                       + " " + m_AltitudeTextureLoadedName/*Afecta el codigo ejecutado*/
                       + " " + m_VariabilityTextureLoadedName/*Afecta el codigo ejecutado*/
@@ -1941,6 +2107,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pCellCodeTextureSwap->GetName()
                       + moText(" ")+m_pCellMemoryTextureSwap->GetName()
                       + " " + m_pStateTextureSwap->GetName()
+
                       + " " + m_MediumTextureLoadedName/*Afecta el codigo ejecutado*/
                       + " " + m_AltitudeTextureLoadedName/*Afecta el codigo ejecutado*/
                       + " " + m_VariabilityTextureLoadedName/*Afecta el codigo ejecutado*/
@@ -1963,6 +2130,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pCellCodeTexture->GetName()
                       + moText(" ")+m_pCellMemoryTexture->GetName()
                       + " " + m_pStateTexture->GetName()
+
                       + " " + m_MediumTextureLoadedName/*Afecta la memoria*/
                       + " " + m_AltitudeTextureLoadedName/*Afecta la memoria*/
                       + " " + m_VariabilityTextureLoadedName/*Afecta la memoria*/
@@ -1985,11 +2153,13 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pCellCodeTextureSwap->GetName()
                       + moText(" ")+m_pCellMemoryTextureSwap->GetName()
                       + " " + m_pStateTextureSwap->GetName()
+
                       + " " + m_MediumTextureLoadedName/*Afecta la memoria*/
                       + " " + m_AltitudeTextureLoadedName/*Afecta la memoria */
                       + " " + m_VariabilityTextureLoadedName/*Afecta la memoria*/
                       + " " + m_ConfidenceTextureLoadedName/*Afecta la memoria*/
                       + moText(" ")+this->GetLabelName()+moText("/CellMemory.cfg " )
+
                       + m_pCellMemoryTexture->GetName() );
     MODebug2->Message(     moText("SHADER: CELL MEMORY        ======================"));
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
@@ -2017,6 +2187,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pStateTexture->GetName()
                       + moText(" ")+m_pCellCodeTexture->GetName()
                       + moText(" ")+m_pCellMemoryTexture->GetName()
+                      + moText(" ")+m_pScaleTexture->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Birth.cfg " )
                       + m_pStateTextureSwap->GetName() );
     MODebug2->Message(     moText("SHADER: BIRTH SWAP   ======================"));
@@ -2035,6 +2206,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pStateTextureSwap->GetName()
                       + moText(" ")+m_pCellCodeTextureSwap->GetName()
                       + moText(" ")+m_pCellMemoryTextureSwap->GetName()
+                      + moText(" ")+m_pScaleTextureSwap->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Birth.cfg " )
                       + m_pStateTexture->GetName() );
     MODebug2->Message(     moText("SHADER: BIRTH        ======================"));
@@ -2107,8 +2279,8 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_AltitudeTextureLoadedName/**/
                       + " " + m_VariabilityTextureLoadedName/**/
                       + " " + m_ConfidenceTextureLoadedName/**/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
-                      + moText(" ")+m_pCellMemoryTexture->GetName()
+                      + moText(" ")+m_pCellCodeTextureSwap->GetName()
+                      + moText(" ")+m_pCellMemoryTextureSwap->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Color.cfg " )
                       + m_pColorTexture->GetName() );
     MODebug2->Message(     moText("SHADER: COLOR ==========================="));
@@ -2171,118 +2343,26 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
       MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
   }
 
-  /// CREATE FILTER FOR VELOCITY CHANGES (BIRTH AND DEATH) !!!
-  if ( !m_pTFilter_VelocityTexture && m_pStateTextureSwap
-      && m_pVelocityTexture && m_pVelocityTextureSwap
-      && m_pColorTextureSwap && m_pPositionTextureSwap) {
-    moTextArray copy_filter_0;
-    copy_filter_0.Add( m_pStateTextureSwap->GetName()
-                      + " "
-                      + m_pColorTextureSwap->GetName()
-                      + " "
-                      + m_pVelocityTexture->GetName()
-                      + " " + m_pPositionTextureSwap->GetName()
-                      + " " + m_MediumTextureLoadedName/*el color determina el tipo de movimiento: 0 fijo, 1 lineal, [0<>0.5] fractal dimension N [N es 2 si el espacio es 2d. N es 3 si este es 3d, etc...], [0.5<>1.0] fractal hacia dimension 1 (dimension, hacia atras o hacia adelante)  */
-                      + " " + m_AltitudeTextureLoadedName/*la altitud se puede interpretar como gravedad o como altura: mayor gravedad=>menor velocidad, mayor altitud=>mayor velocidad*/
-                      + " " + m_VariabilityTextureLoadedName/*la variabilidad: orienta la tendencia hacia donde se mueve este valor, el movimiento estará orientado hacia el centro de gravedad de la tendencia*/
-                      + " " + m_ConfidenceTextureLoadedName/*la confianza reduce o aumenta el nivel de ruido dentro del movimiento*/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
-                      + moText(" ")+this->GetLabelName()+moText("/Velocity.cfg " )
-                      + m_pVelocityTextureSwap->GetName() );
-
-    MODebug2->Message(     moText("SHADER: VELOCITY SWAP ===================="));
-    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
-    if (idx>0) {
-        m_pTFilter_VelocityTexture = pTextureFilterIndex->Get(idx-1);
-        MODebug2->Message( moText("filter loaded m_pTFilter_VelocityTexture: ") + m_pTFilter_VelocityTexture->GetTextureFilterLabelName() );
-        MODebug2->Message( moText("-------------------------------------------"));
-    }
+  tName = "pf_normal_fx#"+this->GetLabelName()+"_";
+  Mid = TextureMan()->AddTexture( tName, p_cols, p_rows, tparam );
+  if (Mid>0) {
+      m_pNormalTexture = TextureMan()->GetTexture(Mid);
+      m_pNormalTexture->BuildEmpty( p_cols, p_rows );
+      MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " + strResolution);
+  } else {
+      MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
   }
 
-  /// CREATE FILTER FOR VELOCITY CHANGES (BIRTH AND DEATH) !!!
-  if ( !m_pTFilter_VelocityTextureSwap && m_pStateTexture
-      && m_pVelocityTexture && m_pVelocityTextureSwap && m_pPositionTexture ) {
-    moTextArray copy_filter_0;
-    copy_filter_0.Add( m_pStateTexture->GetName()
-                      + " "
-                      + m_pColorTexture->GetName()
-                      + " "
-                      +  m_pVelocityTextureSwap->GetName()
-                      + " " + m_pPositionTexture->GetName()
-                      + " " + m_MediumTextureLoadedName
-                      + " " + m_AltitudeTextureLoadedName
-                      + " " + m_VariabilityTextureLoadedName
-                      + " " + m_ConfidenceTextureLoadedName
-                      + moText(" ")+m_pCellCodeTexture->GetName()
-                      + moText(" ")+this->GetLabelName()+moText("/Velocity.cfg " )
-                      + m_pVelocityTexture->GetName() );
-    MODebug2->Message(     moText("SHADER: VELOCITY =========================="));
-    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
-    if (idx>0) {
-        m_pTFilter_VelocityTextureSwap = pTextureFilterIndex->Get(idx-1);
-        MODebug2->Message( moText("filter loaded m_pTFilter_VelocityTextureSwap: ") + m_pTFilter_VelocityTextureSwap->GetTextureFilterLabelName() );
-        MODebug2->Message( moText("-------------------------------------------"));
-    }
+  //pos x, y, z, alive SWAP
+  tName = "pf_normal_swap_fx#"+this->GetLabelName()+"_";
+  Mid = TextureMan()->AddTexture( tName, p_cols, p_rows, tparam );
+  if (Mid>0) {
+      m_pNormalTextureSwap = TextureMan()->GetTexture(Mid);
+      m_pNormalTextureSwap->BuildEmpty( p_cols, p_rows );
+      MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " + strResolution);
+  } else {
+      MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
   }
-
-/**
-
-  POSITION
-
-*/
-
-
-
-
-  /// CREATE FILTER FOR POSITION CHANGES (BIRTH AND DEATH) !!!
-  if ( !m_pTFilter_PositionTextureSwap && m_pPositionTexture && m_pPositionTextureSwap ) {
-    moTextArray copy_filter_0;
-    copy_filter_0.Add(
-                      //+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTextureSwap->GetName()
-                      + " " + m_pVelocityTextureSwap->GetName()
-                      + " " + m_pPositionTexture->GetName()
-                      + " " + m_pColorTexture->GetName()
-                      + " " + m_MediumTextureLoadedName/*el color se puede interpretar para zonificar las particulas: rojo a la izquierda de la pantalla, azul a la derecha*/
-                      + " " + m_AltitudeTextureLoadedName/*la altidud a su vez puede servir para dar una profundidad al valor...*/
-                      + " " + m_VariabilityTextureLoadedName/*la variabilidad del dato hace que permita nivelar la posicion con mayor precisión: hacia donde se dirige*/
-                      + " " + m_ConfidenceTextureLoadedName/*la confianza del dato hace que tenga una posición menos precisa*/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
-                      + moText(" ")+this->GetLabelName()+moText("/Position.cfg" )
-                      + " " + m_pPositionTextureSwap->GetName() );
-    MODebug2->Message(     moText("SHADER: POSITION SWAP ====================="));
-    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
-    if (idx>0) {
-        m_pTFilter_PositionTextureSwap = pTextureFilterIndex->Get(idx-1);
-        MODebug2->Message( moText("filter loaded m_pTFilter_PositionTextureSwap: ") + m_pTFilter_PositionTextureSwap->GetTextureFilterLabelName() );
-        MODebug2->Message( moText("-------------------------------------------"));
-    }
-  }
-
-  /// CREATE FILTER FOR POSITION CHANGES (BIRTH AND DEATH) !!!
-  if ( !m_pTFilter_PositionTexture && m_pPositionTexture && m_pPositionTextureSwap ) {
-    moTextArray copy_filter_0;
-    copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTexture->GetName()
-                      + " " + m_pVelocityTexture->GetName()
-                      + " " + m_pPositionTextureSwap->GetName()
-                      + " " + m_pColorTexture->GetName()
-                      + " " + m_MediumTextureLoadedName
-                      + " " + m_AltitudeTextureLoadedName
-                      + " " + m_VariabilityTextureLoadedName
-                      + " " + m_ConfidenceTextureLoadedName
-                      + moText(" ")+m_pCellCodeTexture->GetName()
-                      + moText(" ")+this->GetLabelName()+moText("/Position.cfg" )
-                      + " " + m_pPositionTexture->GetName() );
-    MODebug2->Message(     moText("SHADER: POSITION ========================="));
-    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
-    if (idx>0) {
-        m_pTFilter_PositionTexture = pTextureFilterIndex->Get(idx-1);
-        MODebug2->Message( moText("filter loaded m_pTFilter_PositionTexture: ") + m_pTFilter_PositionTexture->GetTextureFilterLabelName() );
-        MODebug2->Message( moText("-------------------------------------------"));
-    }
-  }
-
 
 /**
 
@@ -2290,29 +2370,6 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
 
 */
 
-  //sx,sy,sz
-  if (1==1) {
-
-      tName = "pf_scale_fx#"+this->GetLabelName()+"_";
-      Mid = TextureMan()->AddTexture( tName, p_cols, p_rows, tparam );
-      if (Mid>0) {
-          m_pScaleTexture = TextureMan()->GetTexture(Mid);
-          m_pScaleTexture->BuildEmpty( p_cols, p_rows );
-          MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " + strResolution);
-      } else {
-          MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
-      }
-
-      tName = "pf_scale_swap_fx#"+this->GetLabelName()+"_";
-      Mid = TextureMan()->AddTexture( tName, p_cols, p_rows, tparam );
-      if (Mid>0) {
-          m_pScaleTextureSwap = TextureMan()->GetTexture(Mid);
-          m_pScaleTextureSwap->BuildEmpty( p_cols, p_rows );
-          MODebug2->Message("moEffectParticlesFractal::InitParticlesFractal > " + tName + " texture created!! " + strResolution);
-      } else {
-          MODebug2->Error("moEffectParticlesFractal::InitParticlesFractal > Couldn't create texture: " + tName + " " + strResolution);
-      }
-  }
   //GL_ARB_vertex_buffer_object
   /// CREATE FILTER FOR SCALE !! (SWAP)
   if (1==1 && !m_pTFilter_ScaleTextureSwap && m_pScaleTexture && m_pScaleTextureSwap ) {
@@ -2322,11 +2379,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       m_pStateTextureSwap->GetName()
                       + " " + m_pPositionTextureSwap->GetName()
                       + " " + m_pScaleTexture->GetName()
+
                       + " " + m_MediumTextureLoadedName/**/
                       + " " + m_AltitudeTextureLoadedName/**/
-                      + " " + m_VariabilityTextureLoadedName/**/
-                      + " " + m_ConfidenceTextureLoadedName/**/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
+
+                      + " " + m_pCellCodeTextureSwap->GetName()
+
+//                      + " " + m_VariabilityTextureLoadedName
+//                      + " " + m_ConfidenceTextureLoadedName
+                      //+ moText(" ")+m_pCellCodeTextureSwap->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Scale.cfg" )
                       + " " + m_pScaleTextureSwap->GetName() );
     MODebug2->Message(     moText("SHADER: SCALE SWAP ========================"));
@@ -2345,11 +2406,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       m_pStateTexture->GetName()
                       + " " + m_pPositionTexture->GetName()
                       + " " + m_pScaleTextureSwap->GetName()
-                      + " " + m_MediumTextureLoadedName/**/
-                      + " " + m_AltitudeTextureLoadedName/**/
-                      + " " + m_VariabilityTextureLoadedName/**/
-                      + " " + m_ConfidenceTextureLoadedName/**/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
+
+                      + " " + m_MediumTextureLoadedName
+                      + " " + m_AltitudeTextureLoadedName
+
+                      + " " + m_pCellCodeTexture->GetName()
+
+//                      + " " + m_VariabilityTextureLoadedName
+//                      + " " + m_ConfidenceTextureLoadedName
+                      //+ moText(" ")+m_pCellCodeTexture->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Scale.cfg" )
                       + " " + m_pScaleTexture->GetName() );
     MODebug2->Message(     moText("SHADER: SCALE ============================="));
@@ -2397,11 +2462,13 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_pVelocityTextureSwap->GetName()
                       + " " + m_pPositionTextureSwap->GetName()
                       + " " + m_pOrientationTexture->GetName()
-                      + " " + m_MediumTextureLoadedName/**/
-                      + " " + m_AltitudeTextureLoadedName/**/
-                      + " " + m_VariabilityTextureLoadedName/**/
-                      + " " + m_ConfidenceTextureLoadedName/**/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
+
+/*                      + " " + m_MediumTextureLoadedName
+                      + " " + m_AltitudeTextureLoadedName
+                      + " " + m_pCellCodeTextureSwap->GetName()
+                      + " " + m_VariabilityTextureLoadedName
+                      + " " + m_ConfidenceTextureLoadedName*/
++ moText(" ")+m_pCellCodeTextureSwap->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Orientation.cfg" )
                       + " " + m_pOrientationTextureSwap->GetName() );
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
@@ -2419,17 +2486,227 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_pVelocityTexture->GetName()
                       + " " + m_pPositionTexture->GetName()
                       + " " + m_pOrientationTextureSwap->GetName()
-                      + " " + m_MediumTextureLoadedName/**/
-                      + " " + m_AltitudeTextureLoadedName/**/
-                      + " " + m_VariabilityTextureLoadedName/**/
-                      + " " + m_ConfidenceTextureLoadedName/**/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
+
+//                      + " " + m_MediumTextureLoadedName
+//                      + " " + m_AltitudeTextureLoadedName
+
+                      + " " + m_pCellCodeTexture->GetName()
+/*                      + " " + m_VariabilityTextureLoadedName
+                      + " " + m_ConfidenceTextureLoadedName*/
+                      //+ moText(" ")+m_pCellCodeTexture->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Orientation.cfg" )
                       + " " + m_pOrientationTexture->GetName() );
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
     if (idx>0) {
         m_pTFilter_OrientationTexture = pTextureFilterIndex->Get(idx-1);
         MODebug2->Message( moText("filter loaded m_pTFilter_OrientationTexture: ") + m_pTFilter_OrientationTexture->GetTextureFilterLabelName() );
+    }
+  }
+
+
+
+  /// CREATE FILTER FOR VELOCITY CHANGES (BIRTH AND DEATH) !!!
+  if ( !m_pTFilter_VelocityTexture && m_pStateTextureSwap
+      && m_pVelocityTexture && m_pVelocityTextureSwap
+      && m_pColorTextureSwap && m_pPositionTextureSwap) {
+    moTextArray copy_filter_0;
+    copy_filter_0.Add( m_pStateTextureSwap->GetName()
+//                      + " " + m_pColorTextureSwap->GetName()
++ " " + m_pCellCodeTextureSwap->GetName()
+                      + " " + m_pVelocityTexture->GetName()
+                      + " " + m_pPositionTextureSwap->GetName()
+///                      + " " + m_pCellCodeTexture->GetName()
+
+                      + " " + m_MediumTextureLoadedName
+                      /// el color determina el tipo de movimiento: 0 fijo, 1 lineal, [0<>0.5] fractal dimension N [N es 2 si el espacio es 2d. N es 3 si este es 3d, etc...],
+                      ///[0.5<>1.0] fractal hacia dimension 1 (dimension, hacia atras o hacia adelante)
+                      + " " + m_AltitudeTextureLoadedName
+                      /// la altitud se puede interpretar como gravedad o como altura: mayor gravedad=>menor velocidad,
+                      /// mayor altitud=>mayor velocidad
+                      + " " + m_VariabilityTextureLoadedName
+                      /// la variabilidad: orienta la tendencia hacia donde se mueve este valor,
+                      /// el movimiento estará orientado hacia el centro de gravedad de la tendencia
+                      + " " + m_ConfidenceTextureLoadedName
+                      /// la confianza reduce o aumenta el nivel de ruido dentro del movimiento
+//+ " " + m_pCellCodeTextureSwap->GetName()
+                      //+ moText(" ")+m_pCellCodeTexture->GetName()
+                      + moText(" ")+this->GetLabelName()+moText("/Velocity.cfg " )
+                      + m_pVelocityTextureSwap->GetName() );
+
+    MODebug2->Message(     moText("SHADER: VELOCITY SWAP ===================="));
+    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
+    if (idx>0) {
+        m_pTFilter_VelocityTexture = pTextureFilterIndex->Get(idx-1);
+        MODebug2->Message( moText("filter loaded m_pTFilter_VelocityTexture: ") + m_pTFilter_VelocityTexture->GetTextureFilterLabelName() );
+        MODebug2->Message( moText("-------------------------------------------"));
+    }
+  }
+
+  /// CREATE FILTER FOR VELOCITY CHANGES (BIRTH AND DEATH) !!!
+  if ( !m_pTFilter_VelocityTextureSwap && m_pStateTexture
+      && m_pVelocityTexture && m_pVelocityTextureSwap && m_pPositionTexture ) {
+    moTextArray copy_filter_0;
+    copy_filter_0.Add( m_pStateTexture->GetName()
+///                      + " " + m_pColorTexture->GetName()
++ " " + m_pCellCodeTexture->GetName()
+                      + " " +  m_pVelocityTextureSwap->GetName()
+                      + " " + m_pPositionTexture->GetName()
+
+///                      + " " + m_pCellCodeTextureSwap->GetName()
+
+                      + " " + m_MediumTextureLoadedName
+                      + " " + m_AltitudeTextureLoadedName
+                      + " " + m_VariabilityTextureLoadedName
+                      + " " + m_ConfidenceTextureLoadedName
+//+ " " + m_pCellCodeTexture->GetName()
+                      + moText(" ")+this->GetLabelName()+moText("/Velocity.cfg " )
+                      + m_pVelocityTexture->GetName() );
+    MODebug2->Message(     moText("SHADER: VELOCITY =========================="));
+    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
+    if (idx>0) {
+        m_pTFilter_VelocityTextureSwap = pTextureFilterIndex->Get(idx-1);
+        MODebug2->Message( moText("filter loaded m_pTFilter_VelocityTextureSwap: ") + m_pTFilter_VelocityTextureSwap->GetTextureFilterLabelName() );
+        MODebug2->Message( moText("-------------------------------------------"));
+    }
+  }
+
+
+/**
+
+  POSITION
+
+*/
+
+
+
+
+  /// CREATE FILTER FOR POSITION CHANGES (BIRTH AND DEATH) !!!
+  if ( !m_pTFilter_PositionTextureSwap && m_pPositionTexture && m_pPositionTextureSwap ) {
+    moTextArray copy_filter_0;
+    copy_filter_0.Add(
+                      //+  moText(" shaders/Birth.cfg res:64x64 " )
+                      m_pStateTextureSwap->GetName()
+                      + " " + m_pVelocityTextureSwap->GetName()
+                      + " " + m_pPositionTexture->GetName()
+///+ " " + m_pColorTexture->GetName()
++ " " + m_pCellCodeTexture->GetName()
+                      + " " + m_MediumTextureLoadedName
+                      /// el color se puede interpretar para zonificar las particulas: rojo a la izquierda de la pantalla, azul a la derecha*/
++ " " + m_pOrientationTexture->GetName()
++ " " + m_pScaleTexture->GetName()
+//                      + " " + m_AltitudeTextureLoadedName
+                      /// la altidud a su vez puede servir para dar una profundidad al valor...
+//                      + " " + m_VariabilityTextureLoadedName
+                      /// la variabilidad del dato hace que permita nivelar la posicion con mayor precisión: hacia donde se dirige
+//                      + " " + m_ConfidenceTextureLoadedName
+                      /// la confianza del dato hace que tenga una posición menos precisa
+///+ " "+m_pCellCodeTexture->GetName()
+                      + moText(" ")+this->GetLabelName()+moText("/Position.cfg" )
+                      + " " + m_pPositionTextureSwap->GetName() );
+    MODebug2->Message(     moText("SHADER: POSITION SWAP ====================="));
+    m_pTFilter_PositionMediumIndex = 4;
+    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
+    if (idx>0) {
+        m_pTFilter_PositionTextureSwap = pTextureFilterIndex->Get(idx-1);
+        MODebug2->Message( moText("filter loaded m_pTFilter_PositionTextureSwap: ") + m_pTFilter_PositionTextureSwap->GetTextureFilterLabelName() );
+        MODebug2->Message( moText("-------------------------------------------"));
+    }
+  }
+
+  /// CREATE FILTER FOR POSITION CHANGES (BIRTH AND DEATH) !!!
+  if ( !m_pTFilter_PositionTexture && m_pPositionTexture && m_pPositionTextureSwap ) {
+    moTextArray copy_filter_0;
+    copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
+                      m_pStateTexture->GetName()
+                      + " " + m_pVelocityTexture->GetName()
+                      + " " + m_pPositionTextureSwap->GetName()
+//+ " " + m_pColorTextureSwap->GetName()
++ " " + m_pCellCodeTextureSwap->GetName()
+                      + " " + m_MediumTextureLoadedName
++ " " + m_pOrientationTextureSwap->GetName()
++ " " + m_pScaleTextureSwap->GetName()
+//                      + " " + m_AltitudeTextureLoadedName
+//                      + " " + m_VariabilityTextureLoadedName
+//                      + " " + m_ConfidenceTextureLoadedName
+///+ " "+m_pCellCodeTextureSwap->GetName()
+                      + moText(" ")+this->GetLabelName()+moText("/Position.cfg" )
+                      + " " + m_pPositionTexture->GetName() );
+    MODebug2->Message(     moText("SHADER: POSITION ========================="));
+    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
+    if (idx>0) {
+        m_pTFilter_PositionTexture = pTextureFilterIndex->Get(idx-1);
+        MODebug2->Message( moText("filter loaded m_pTFilter_PositionTexture: ") + m_pTFilter_PositionTexture->GetTextureFilterLabelName() );
+        MODebug2->Message( moText("-------------------------------------------"));
+    }
+  }
+
+
+/**
+
+  NORMAL
+
+*/
+
+
+
+
+  /// CREATE FILTER FOR POSITION CHANGES (BIRTH AND DEATH) !!!
+  if ( !m_pTFilter_NormalTextureSwap && m_pNormalTexture && m_pNormalTextureSwap ) {
+    moTextArray copy_filter_0;
+    copy_filter_0.Add(
+                      //+  moText(" shaders/Birth.cfg res:64x64 " )
+                      m_pStateTextureSwap->GetName()
+                      + " " + m_pVelocityTextureSwap->GetName()
+                      + " " + m_pPositionTexture->GetName()
+                      + " " + m_pNormalTexture->GetName()
+                      + " " + m_pScaleTexture->GetName()
+///+ " " + m_pColorTexture->GetName()
++ " " + m_pCellCodeTexture->GetName()
++ " " + m_MediumTextureLoadedName
+                      /// el color se puede interpretar para zonificar las particulas: rojo a la izquierda de la pantalla, azul a la derecha*/
+//                      + " " + m_AltitudeTextureLoadedName
+                      /// la altidud a su vez puede servir para dar una profundidad al valor...
+//                      + " " + m_VariabilityTextureLoadedName
+                      /// la variabilidad del dato hace que permita nivelar la posicion con mayor precisión: hacia donde se dirige
+//                      + " " + m_ConfidenceTextureLoadedName
+                      /// la confianza del dato hace que tenga una posición menos precisa
+///+ " "+m_pCellCodeTexture->GetName()
+                      + moText(" ")+this->GetLabelName()+moText("/Normal.cfg" )
+                      + " " + m_pNormalTextureSwap->GetName() );
+    MODebug2->Message(     moText("SHADER: NORMAL SWAP ====================="));
+    m_pTFilter_NormalMediumIndex = 6;
+    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
+    if (idx>0) {
+        m_pTFilter_NormalTextureSwap = pTextureFilterIndex->Get(idx-1);
+        MODebug2->Message( moText("filter loaded m_pTFilter_NormalTextureSwap: ") + m_pTFilter_NormalTextureSwap->GetTextureFilterLabelName() );
+        MODebug2->Message( moText("-------------------------------------------"));
+    }
+  }
+
+  /// CREATE FILTER FOR POSITION CHANGES (BIRTH AND DEATH) !!!
+  if ( !m_pTFilter_NormalTexture && m_pNormalTexture && m_pNormalTextureSwap ) {
+    moTextArray copy_filter_0;
+    copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
+                      m_pStateTexture->GetName()
+                      + " " + m_pVelocityTexture->GetName()
+                      + " " + m_pPositionTextureSwap->GetName()
+                      + " " + m_pNormalTextureSwap->GetName()
+                      + " " + m_pScaleTextureSwap->GetName()
+//+ " " + m_pColorTextureSwap->GetName()
++ " " + m_pCellCodeTextureSwap->GetName()
++ " " + m_MediumTextureLoadedName
+//                      + " " + m_AltitudeTextureLoadedName
+//                      + " " + m_VariabilityTextureLoadedName
+//                      + " " + m_ConfidenceTextureLoadedName
+///+ " "+m_pCellCodeTextureSwap->GetName()
+                      + moText(" ")+this->GetLabelName()+moText("/Normal.cfg" )
+                      + " " + m_pNormalTexture->GetName() );
+    MODebug2->Message(     moText("SHADER: NORMAL ========================="));
+    int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
+    if (idx>0) {
+        m_pTFilter_NormalTexture = pTextureFilterIndex->Get(idx-1);
+        MODebug2->Message( moText("filter loaded m_pTFilter_NormalTexture: ") + m_pTFilter_NormalTexture->GetTextureFilterLabelName() );
+        MODebug2->Message( moText("-------------------------------------------"));
     }
   }
 
@@ -2471,47 +2748,14 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     }
 
     m_EmitterShader.Init();
-    m_EmitterShader.CreateShader(
-            moText(
-            "#extension GL_EXT_gpu_shader4 : enable \n"
-            "\n"
-            "attribute vec4 position;\n"
-            "uniform mat4 projmatrix;\n"
-            "uniform int mcols=256;\n"
-            "uniform int mrows=256;\n"
-            "varying vec4 colorf;\n"
-            "\n"
-            "void main() {\n"
-            " int vid = gl_VertexID;\n"
-            " float fvid = float(vid);\n"
-            " float mmcols = float(mcols);\n"
-            " float frows = float(mrows);\n"
-            " float fcols = float(mmcols);\n"
-            " float vj = floor(fvid / fcols);\n"
-            " float vi = fvid - vj*fcols;\n"
-            " float f_j = vj / frows;\n"
-            " float f_i = vi / fcols;\n"
-            " float red_z = abs( position.z/(0.5*(fcols+frows)) );"
-            " colorf = vec4( 0.5+red_z, 0.5+0.5*f_i, 0.5+0.5*f_j, 1.0);\n"
-            //" if (frows==0.0 && fcols==0.0) colorf = vec4( 1.0, 0.0, 0.0, 1.0);\n"
-            //" else if (fcols==0.0) colorf = vec4( 0.0, 1.0, 0.0, 1.0);\n"
-            //" else if (frows==0.0) colorf = vec4( 0.0, 0.0, 1.0, 1.0);\n"
-            "	gl_Position = projmatrix*position;\n"
-            "}\n"
-            ),
-            moText(
-          #ifdef OPENGLESV2
-            "precision mediump float;"
-          #endif
-            "uniform sampler2D t_image;\n"
-            "varying vec4 colorf;\n"
-            "\n"
-            "void main() {\n"
-            ""
-            "	gl_FragColor = vec4( 1.0, colorf.g, colorf.b, 1.0 );\n"
-            "}\n"
-            )
-          );
+
+    MODebug2->Message("moParticlesFractal::InitParticlesFractal > Creating basic Emitter Shader...");
+    moText basen = pDM->GetDataPath()+moSlash + this->GetLabelName() + moSlash;
+    moText vx_fn = basen + "esVertex.glsl";
+    moText fx_fn = basen + "esFragment.glsl";
+    MODebug2->Message("loading from:" + vx_fn+ " " + fx_fn);
+
+    m_EmitterShader.LoadShader(vx_fn,fx_fn);
 
           m_EmitterShader.PrintVertShaderLog();
           m_EmitterShader.PrintFragShaderLog();
@@ -2591,302 +2835,168 @@ mat4 rotationMatrix(vec3 axis, float angle)\n"
 
 */
 
+}
 
-  if (!m_RenderShader.Initialized()) {
-      MODebug2->Message("moParticlesFractal::InitParticlesFractal > Creating basic Render Shader...");
-      m_RenderShader.Init();
-      m_RenderShader.CreateShader(
-            moText(
-            "#version 330\n"
-            "in vec4 position;\n"
-            "in vec4 scale;\n"
-            "in vec4 orientation;\n"
-            "in vec4 colors;\n"
+void moEffectParticlesFractal::UpdateRenderShader() {
 
-            //"in vec4 materials;\n"
-            "uniform sampler2D t_cellmem;\n"
-            "uniform mat4 projmatrix;\n"
-            "uniform vec3 color;\n"
-            "uniform vec3 scalev;\n"
-            "uniform float opacity;\n"
-            "uniform int mcols=256;\n"
-            "uniform int mrows=256;\n"
-            "out mat4 pmatrix;\n"
-            //"attribute vec2 t_coord;\n"
-            //"attribute vec3 normal;\n"
-            //"out vec4 vertex_color;\n"
-            //"out vec4 vertex_normal;\n"
-            //"out vec2 vertex_coord;\n"
-            "\n"
-            "out VertexAttrib {\n"
-            //" vec2 texcoord;\n"
-            " vec4 color;\n"
-            " vec4 position;\n"
-            " vec4 scale;\n"
-            " float ffvid;\n"
-            " float material;\n"
-            //" vec4 normal;\n"
-            " vec4 orientation;\n"
-            "} vertex;\n"
-            "\n"
-            "void main() {\n"
-            " int vid = gl_VertexID;\n"
-            " float fvid = float(vid);\n"
-            " float mmcols = float(mcols);\n"
-            " float frows = float(mrows);\n"
-            " float fcols = float(mmcols);\n"
-            " float vj = floor(fvid / fcols);\n"
-            " float vi = fvid - vj*fcols;\n"
-            " float f_j = (vj) / frows;\n"
-            " float f_i = (vi) / fcols;\n"
-            //"vertex.texcoord = t_coord;\n"
-            //"	vec4 vertex01 = vec4( position.x, position.y-0.4, position.z, 1.0);\n"
-            //"	vec4 vertex02 = vec4( position.x-0.5, position.y+0.1, position.z, 1.0);\n"
-            //"	vec4 vertex03 = vec4( position.x+0.5, position.y+0.1, position.z, 1.0);\n"
-            //"	vec4 vfinal = (position.w-0.1)*(position.w-0.2)*vertex03/(0.1*0.2);\n"
-            //"	vec4 vfinal = (position.w-0.1)*(position.w-0.2)*vertex03/(0.1*0.2);\n"
-            " vertex.position = position;\n"
-            "	gl_Position = position;\n"
-            "vertex.color = vec4( colors.r*color.r, colors.g*color.g, colors.b*color.b, opacity*colors.a);\n"
-            //"vertex.normal = orientation;\n"
-            "vertex.scale = vec4(scale.x*scalev.x, scale.y*scalev.y, scale.z*scalev.z, 1.0);\n"
-            "vertex.ffvid = fvid;\n"
-            "vertex.material = texture2D( t_cellmem, vec2( f_i, f_j ) ).r;\n"
-            "vertex.orientation = orientation;\n"
-            //"vertex.material = materials.x;\n"
-            //"vertex.material = fvid;\n"
-            "\n"
-            //"vertex_color = vec4( color.rgb,opacity) + colors;\n"
-            //"vertex_normal = orientation;\n"
-            //"vertex_coord = vec2(0.5,0.5);\n"
-            "pmatrix = projmatrix;\n"
-            //"vertex_coord = scale;\n"
-            //"	gl_Position = position;\n"
-            "}\n"
-            ),
-            moText(
-            "#version 330\n"
-          #ifdef OPENGLESV2
-            "precision mediump float;"
-          #endif
-            //"uniform sampler2D t_image;\n"
-            "uniform sampler2DArray t_array;\n"
-            //uniform vec3 a_light;\n"
-            "\n"
-            "in vec4 vertex_color;\n"
-            "in vec2 vertex_coord;\n"
-            "in float vertex_id;\n"
-            "in float vertex_material;\n"
-            //"in vec4 vertex_normal;\n"
-            "\n"
-            "void main() {\n"
-            //"	vec4 texcolor = texture2D( t_image, vertex_coord );\n"
-            //" int layer =  int(vertex_id);\n"
-            " float ffmaterial = floor(vertex_material + 0.5);\n"
-            " int layer =  int(ffmaterial);\n"
-            //" float ffid = fvertex_id*0.00001;\n"
-            "	vec4 texcolorA = texture( t_array, vec3(vertex_coord.s, vertex_coord.t, layer ) );\n"
-            //"	float intensity = 0.6+0.4*abs(max( 0.0, dot( v_normal, -1.0*a_light )) );\n"
-            //"	float intensity = 1.0;\n"
-            //" if (vertex_coord.s<0.0 || vertex_coord.s>1.0 || vertex_coord.t<0.0 || vertex_coord.t>1.0 ) texcolor = vec4( 0,0,0,0);\n"
-            //"	vec4 mulcolor = intensity*vec4( 1.0*vertex_color.r, 1.0*vertex_color.g, 1.0*vertex_color.b, 1.0*vertex_color.a );\n"
-            "	gl_FragColor = vec4( texcolorA.r*vertex_color.r, texcolorA.g*vertex_color.g, texcolorA.b*vertex_color.b, vertex_color.a*texcolorA.a);\n"
-            //"	gl_FragColor = vec4( vertex_id*0.1, texcolorA.g*vertex_color.g, texcolorA.b*vertex_color.b, vertex_color.a*texcolorA.a);\n"
-            //"	gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0);\n"
-            //"	gl_FragColor = vec4( vertex_color.r, vertex_color.g, vertex_color.b, 1.0);\n"
-            "}\n"
-            )
-            ,
-            moText(
-            "#version 330\n"
-            "layout(points) in;\n"
-            "layout(triangle_strip, max_vertices = 16) out;\n"
-            //"layout(points, max_vertices = 2) out;\n"
-            //"layout(line_strip, max_vertices = 4) out;\n"
-            //"uniform mat4 projmatrix;\n"
-            "in mat4 pmatrix[];\n"
-            "in VertexAttrib {\n"
-            //" vec2 texcoord;\n"
-            " vec4 color;\n"
-            " vec4 position;\n"
-            " vec4 scale;\n"
-            " float ffvid;\n"
-            " float material;\n"
-            //" int vid;\n"
-            " vec4 orientation;\n"
-            //" vec4 normal;\n"
-            "} vertex[];\n"
-            "out vec4 vertex_color;\n"
-            "out vec2 vertex_coord;\n"
-            "out float vertex_id;\n"
-            "out float vertex_material;\n"
-            //"out vec4 vertex_normal;\n"
-            "\n"
-            ""
-            "mat4 build_transform(vec3 pos, vec3 ang) {\n"
-            " float cosX = cos(ang.x);float sinX = sin(ang.x);\n"
-            " float cosY = cos(ang.y);float sinY = sin(ang.y);\n"
-            " float cosZ = cos(ang.z);\n"
-            " float sinZ = sin(ang.z);\n"
-            " mat4 m;\n"
-            " float m00 = cosY * cosZ + sinX * sinY * sinZ;\n"
-            " float m01 = cosY * sinZ - sinX * sinY * cosZ;\n"
-            " float m02 = cosX * sinY;\n"
-            " float m03 = 0.0;\n"
-            " float m04 = -cosX * sinZ;\n"
-            " float m05 = cosX * cosZ;\n"
-            " float m06 = sinX;\n"
-            " float m07 = 0.0;\n"
-            " float m08 = sinX * cosY * sinZ - sinY * cosZ;\n"
-            " float m09 = -sinY * sinZ - sinX * cosY * cosZ;\n"
-            " float m10 = cosX * cosY;\n"
-            " float m11 = 0.0;\n"
-            " float m12 = pos.x;\n"
-            " float m13 = pos.y;\n"
-            " float m14 = pos.z;\n"
-            " float m15 = 1.0;\n"
-///------ Orientation ---------------------------------
-            " m[0][0] = m00; // first entry of the first column.\n"
-            " m[0][1] = m01; // second entry of the first column.\n"
-            " m[0][2] = m02;\n"
-            " m[0][3] = m03;\n"
+  moDataManager *pDM = m_pResourceManager->GetDataMan();
 
-            " m[1][0] = m04; // first entry of the second column.\n"
-            " m[1][1] = m05; // second entry of the second column.\n"
-            " m[1][2] = m06;\n"
-            " m[1][3] = m07;\n"
+  if (m_RenderShader.Initialized()) {
+    m_RenderShader.Finish();
+  }
 
-            " m[2][0] = m08; // first entry of the third column.\n"
-            " m[2][1] = m09; // second entry of the third column.\n"
-            " m[2][2] = m10;\n"
-            " m[2][3] = m11;\n"
+  MODebug2->Message("moParticlesFractal::InitParticlesFractal > Creating basic Render Shader...");
+  moText basen = pDM->GetDataPath()+moSlash + this->GetLabelName() + moSlash;
+  moText vx_fn = basen + "rsVertex.glsl";
+  moText fx_fn = basen + "rsFragment.glsl";
+  moText gx_fn = basen + "rsGeometry.glsl";
+/**
+0 POINT,
+1 LINE_STRIP,
+2 TRIANGLE_STRIP,
+3 QUADS,
+4 FEATHER,
+5 TETRA,
+6 TREE,
+7 CONE,
+8 VORONOI,
+9 INSTANCE
+*/
 
-  ///------ Position ------------------------------------
-  " m[3][0] = m12; // first entry of the fourth column.\n"
-  " m[3][1] = m13; // second entry of the fourth column.\n"
-  " m[3][2] = m14;\n"
-  " m[3][3] = m15;\n"
+  moText n_gx_fn = "";
 
-  " return m;\n"
-  "}\n"
-            "void main() {\n"
-            " float ffid = mod( vertex[0].ffvid, 30.0 );\n"
-            " float fmaterial = vertex[0].material;\n"
-            " float sx = vertex[0].scale.x*0.5;\n"
-            " float sy = vertex[0].scale.y*0.5;\n"
-            " mat4 mOri = build_transform( vec3(0.0,0.0,0.0), vertex[0].orientation.xyz*(3.141516/180.0) );\n"
-            //" float fmaterial = ffid;\n"
-            //" gl_Position = pmatrix[0] * gl_in[0].gl_Position;\n"
-            //" gl_Position = gl_in[0].gl_Position+vec4(0.0, -0.000001, 0.0, 0.0);\n"
-            //" gl_Position = pmatrix[0] * ( gl_in[0].gl_Position*0.000000001 + vec4(0.0, 0.00000000000001, 0.0, 0.0 ));\n"
-            " gl_Position = pmatrix[0] * (vertex[0].position + mOri*vec4( -sx, sy, 0.0, 0.0 ));\n"
-            //" gl_Position = pmatrix[0] * ( vec4(0.0, 0.001, 0.0, 0.0 ));\n"
-            //" vertex_coord = vertex[0].texcoord;\n"
-            " vertex_color = vertex[0].color;\n"
-            " vertex_coord = vec2( 0.0, 0.0);\n"
-            " vertex_id = ffid;\n"
-            " vertex_material = fmaterial;\n"
-            //" vertex_color = vertex[0].color;\n"
-            //" vertex_color = vec4(0.5,0.5,1.0,1.0);\n"
-            //" vertex_normal = vertex[0].normal;\n"
-            " EmitVertex();\n"
-            //" gl_Position = gl_in[1].gl_Position;\n"
-            //" gl_Position = pmatrix[0]*gl_in[0].gl_Position;\n"
-            //" vertex_coord = vertex[1].texcoord;\n"
-            //" gl_Position = pmatrix[0] * ( gl_in[0].gl_Position*0.000000001 + vec4(-0.00000000000001, -0.00000000000001, 0.0, 0.0 ));\n"
-            " gl_Position = pmatrix[0] * (vertex[0].position + mOri * vec4( -sx, -sy, 0.0, 0.0 ) );\n"
-            //" gl_Position = pmatrix[0] * ( vec4(-1, -1, 0.0, 0.0 ));\n"
-            " vertex_coord = vec2( 0.0, 1.0);\n"
-            //" vertex_color = vertex[1].color;\n"
-            " vertex_color = vertex[0].color;\n"
-            " vertex_id = ffid;\n"
-            " vertex_material = fmaterial;\n"
-            //" vertex_color = vec4(1.0,0.5,0.5,1.0);\n"
-            //" vertex_normal = vertex[0].normal;\n"
-            " EmitVertex();\n"
-            //" gl_Position = pmatrix[0]*gl_in[0].gl_Position;\n"
-            //" gl_Position = gl_in[0].gl_Position+vec4(-0.000001, 0.0, 0.0, 0.0);\n"
-            //" vertex_coord = vertex[2].texcoord;\n"
-            " gl_Position = pmatrix[0] * (vertex[0].position + mOri * vec4( sx, sy, 0.0, 0.0 ) );\n"
-            //" gl_Position = pmatrix[0] * ( gl_in[0].gl_Position*0.000000001 + vec4(0.00000000000001, -0.00000000000001, 0.0, 0.0 ));\n"
-            //" gl_Position = pmatrix[0] * ( vec4( 1, -1, 0.0, 0.0 ));\n"
-            " vertex_coord = vec2( 1.0, 0.0);\n"
-            //" vertex_color = vertex[2].color;\n"
-            //" vertex_color = vec4(0.5,1.0,0.5,1.0);\n"
-            " vertex_color = vertex[0].color;\n"
-            " vertex_id = ffid;\n"
-            " vertex_material = fmaterial;\n"
-            //" vertex_normal = vertex[0].normal;\n"
-            " EmitVertex();\n"
-            " gl_Position = pmatrix[0] * (vertex[0].position + mOri * vec4( sx, -sy, 0.0, 0.0 ));\n"
-            //" gl_Position = pmatrix[0] * ( vec4(0.0, 0.001, 0.0, 0.0 ));\n"
-            //" vertex_coord = vertex[0].texcoord;\n"
-            //" vertex_color = vertex[0].color;\n"
-            " vertex_coord = vec2( 1.0, 1.0);\n"
-            " vertex_color = vertex[0].color;\n"
-            " vertex_id = ffid;\n"
-            " vertex_material = fmaterial;\n"
-            //" vertex_color = vec4(0.5,0.5,1.0,1.0);\n"
-            //" vertex_normal = vertex[0].normal;\n"
-            " EmitVertex();\n"
-            " EndPrimitive();\n"
-            "}\n"
-            )
-          );
+  if (geometry_mode==PARTICLES_GEOMETRY_MODE_POINTS) {
+    n_gx_fn = basen + "rsGeometryPoints.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_LINES) {
+    n_gx_fn = basen + "rsGeometryLines.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_TRIANGLES) {
+    n_gx_fn = basen + "rsGeometryTriangles.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_QUADS) {
+  n_gx_fn = basen + "rsGeometryQuads.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_FEATHER) {
+    n_gx_fn = basen + "rsGeometryFeather.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_TETRA) {
+    n_gx_fn = basen + "rsGeometryTetra.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_TREE) {
+    n_gx_fn = basen + "rsGeometryTree.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_CONE) {
+    n_gx_fn = basen + "rsGeometryCone.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_VORONOI) {
+    n_gx_fn = basen + "rsGeometryVoronoi.glsl";
+  } else if (geometry_mode==PARTICLES_GEOMETRY_MODE_INSTANCE) {
+    n_gx_fn = basen + "rsGeometryInstance.glsl";
+  }
 
-         m_RenderShader.PrintVertShaderLog();
-         m_RenderShader.PrintFragShaderLog();
-         m_RenderShader.PrintGeomShaderLog();
+  if (moFileManager::FileExists(n_gx_fn)) gx_fn = n_gx_fn;
+
+  MODebug2->Message("loading from:" + vx_fn+ " " + fx_fn + " " + gx_fn);
+
+  m_RenderShader.Init();
+  m_RenderShader.LoadShader( vx_fn, fx_fn, gx_fn  );
+
+  m_RenderShader.PrintVertShaderLog();
+  m_RenderShader.PrintFragShaderLog();
+  m_RenderShader.PrintGeomShaderLog();
 
 
 
-         m_RenderShaderPositionIndex = m_RenderShader.GetAttribID(moText("position"));
-         m_RenderShaderColorsIndex = m_RenderShader.GetAttribID(moText("colors"));
-         m_RenderShaderScaleIndex = m_RenderShader.GetAttribID(moText("scale"));
-         m_RenderShaderOrientationIndex = m_RenderShader.GetAttribID(moText("orientation"));
-         //m_RenderShaderMaterialsIndex = m_RenderShader.GetAttribID(moText("materials"));
+  m_RenderShaderPositionIndex = m_RenderShader.GetAttribID(moText("position"));
+  m_RenderShaderColorsIndex = m_RenderShader.GetAttribID(moText("colors"));
+  m_RenderShaderScaleIndex = m_RenderShader.GetAttribID(moText("scale"));
+  m_RenderShaderOrientationIndex = m_RenderShader.GetAttribID(moText("orientation"));
+  //m_RenderShaderMaterialsIndex = m_RenderShader.GetAttribID(moText("materials"));
 
-         //m_RenderShaderTexCoordIndex = m_RenderShader.GetAttribID(moText("t_coord"));
-         //m_RenderShaderNormalIndex = m_RenderShader.GetAttribID(moText("orientation"));
+  //m_RenderShaderTexCoordIndex = m_RenderShader.GetAttribID(moText("t_coord"));
+  m_RenderShaderNormalIndex = m_RenderShader.GetAttribID(moText("normal"));
 
-         m_RenderShaderColorIndex = m_RenderShader.GetUniformID(moText("color"));
-         m_RenderShaderScaleVIndex = m_RenderShader.GetUniformID(moText("scalev"));
-         m_RenderShaderOpacityIndex = m_RenderShader.GetUniformID(moText("opacity"));
-         //m_RenderShaderTextureIndex = m_RenderShader.GetUniformID(moText("t_image"));
-         m_RenderShaderTextureArrayIndex = m_RenderShader.GetUniformID(moText("t_array"));
-         m_RenderShaderCellMemIndex = m_RenderShader.GetUniformID(moText("t_cellmem"));
-         m_RenderShaderProjectionMatrixIndex = m_RenderShader.GetUniformID("projmatrix");
-         //m_RenderShaderLightIndex = m_RenderShader.GetUniformID(moText("a_light"));
+  m_RenderShaderColorIndex = m_RenderShader.GetUniformID(moText("color"));
+  m_RenderShaderScaleVIndex = m_RenderShader.GetUniformID(moText("scalev"));
+  m_RenderShaderOpacityIndex = m_RenderShader.GetUniformID(moText("opacity"));
 
-         m_RenderShaderColsIndex = m_RenderShader.GetUniformID(moText("mcols"));
-        m_RenderShaderRowsIndex = m_RenderShader.GetUniformID(moText("mrows"));
+  m_RenderShaderTextureIndex = m_RenderShader.GetUniformID(moText("t_image"));
+  m_RenderShaderTextureModeIndex = m_RenderShader.GetUniformID(moText("texture_mode"));
+  m_RenderShaderTextureOpacityIndex = m_RenderShader.GetUniformID(moText("texture_opacity"));
+  m_RenderShaderTextureOffXIndex = m_RenderShader.GetUniformID(moText("texture_off_x"));
+  m_RenderShaderTextureOffYIndex = m_RenderShader.GetUniformID(moText("texture_off_y"));
+  m_RenderShaderTextureScaleXIndex = m_RenderShader.GetUniformID(moText("texture_scale_x"));
+  m_RenderShaderTextureScaleYIndex = m_RenderShader.GetUniformID(moText("texture_scale_y"));
+  m_RenderShaderTextureRotationIndex = m_RenderShader.GetUniformID(moText("texture_rotation"));
+
+  m_RenderShaderTexture2Index = m_RenderShader.GetUniformID(moText("t_image_2"));
+  m_RenderShaderTexture2ModeIndex = m_RenderShader.GetUniformID(moText("texture_2_mode"));
+  m_RenderShaderTexture2OpacityIndex = m_RenderShader.GetUniformID(moText("texture_2_opacity"));
+  m_RenderShaderTexture2OffXIndex = m_RenderShader.GetUniformID(moText("texture_2_off_x"));
+  m_RenderShaderTexture2OffYIndex = m_RenderShader.GetUniformID(moText("texture_2_off_y"));
+  m_RenderShaderTexture2ScaleXIndex = m_RenderShader.GetUniformID(moText("texture_2_scale_x"));
+  m_RenderShaderTexture2ScaleYIndex = m_RenderShader.GetUniformID(moText("texture_2_scale_y"));
+  m_RenderShaderTexture2RotationIndex = m_RenderShader.GetUniformID(moText("texture_2_rotation"));
 
 
-         MODebug2->Message(moText(
+  m_RenderShaderTextureArrayIndex = m_RenderShader.GetUniformID(moText("t_array"));
+  m_RenderShaderCellMemIndex = m_RenderShader.GetUniformID(moText("t_cellmem"));
+  m_RenderShaderCellStateIndex = m_RenderShader.GetUniformID(moText("t_cellstate"));
+  m_RenderShaderTexturePositionIndex = m_RenderShader.GetUniformID(moText("t_position"));
+  m_RenderShaderTextureNormalIndex = m_RenderShader.GetUniformID(moText("t_normal"));
+  //m_RenderShaderTextureScaleIndex = m_RenderShader.GetUniformID(moText("t_scale"));
+  m_RenderShaderProjectionMatrixIndex = m_RenderShader.GetUniformID("projmatrix");
+  m_RenderShaderLightIndex = m_RenderShader.GetUniformID(moText("a_light"));
 
-                            "moShaderManager::Init > m_RenderShader Attrib IDs,"
-                            " position:"+IntToStr(m_RenderShaderPositionIndex)+""
-                            " scale:"+IntToStr(m_RenderShaderScaleIndex)+""
-                            " orientation:"+IntToStr(m_RenderShaderOrientationIndex)+""
-                            " colors:"+IntToStr(m_RenderShaderColorsIndex)+""
-                            //" materials:"+IntToStr(m_RenderShaderMaterialsIndex)+""
+  m_RenderShaderColsIndex = m_RenderShader.GetUniformID(moText("mcols"));
+  m_RenderShaderRowsIndex = m_RenderShader.GetUniformID(moText("mrows"));
+  m_RenderShaderEyeIndex = m_RenderShader.GetUniformID(moText("eye"));
 
-                            //" t_coord:"+IntToStr(m_RenderShaderTexCoordIndex)+""
+  m_RenderShaderFeatherSegmentsIndex = m_RenderShader.GetUniformID(moText("feather_segments"));
+  m_RenderShaderFeatherLengthIndex = m_RenderShader.GetUniformID(moText("feather_length"));
+  m_RenderShaderFeatherHeadIndex = m_RenderShader.GetUniformID(moText("feather_head"));
+  m_RenderShaderFeatherDynamicIndex = m_RenderShader.GetUniformID(moText("feather_dynamic"));
 
-                            ));
+  MODebug2->Message(moText(
 
-         MODebug2->Message( moText(
-                            "moShaderManager::Init > m_RenderShader Uniform IDs,"
-                            " color:"+IntToStr(m_RenderShaderColorIndex)+""
-                            " opacity:"+IntToStr(m_RenderShaderOpacityIndex)+""
-                            " scalev:"+IntToStr(m_RenderShaderScaleVIndex)+""
-                            " projmatrix:"+IntToStr(m_RenderShaderProjectionMatrixIndex)+""
-                            //+moText(" a_light:")+IntToStr(m_RenderShaderLightIndex)
-                            //" t_image:"+IntToStr(m_RenderShaderTextureIndex)+""
-                            " t_array:"+IntToStr(m_RenderShaderTextureArrayIndex)+""
-                            " t_cellmem:"+IntToStr(m_RenderShaderCellMemIndex)+""
-                            ));
-    }
+    "moShaderManager::Init > m_RenderShader Attrib IDs,"
+    " position:"+IntToStr(m_RenderShaderPositionIndex)+""
+    " scale:"+IntToStr(m_RenderShaderScaleIndex)+""
+    " orientation:"+IntToStr(m_RenderShaderOrientationIndex)+""
+    " colors:"+IntToStr(m_RenderShaderColorsIndex)+""
+    //" materials:"+IntToStr(m_RenderShaderMaterialsIndex)+""
+
+    //" t_coord:"+IntToStr(m_RenderShaderTexCoordIndex)+""
+
+    ));
+
+  MODebug2->Message( moText(
+    "moShaderManager::Init > m_RenderShader Uniform IDs,"
+    " color:"+IntToStr(m_RenderShaderColorIndex)+""
+    " normal:"+IntToStr(m_RenderShaderNormalIndex)+""
+    " opacity:"+IntToStr(m_RenderShaderOpacityIndex)+""
+    " scalev:"+IntToStr(m_RenderShaderScaleVIndex)+""
+    " projmatrix:"+IntToStr(m_RenderShaderProjectionMatrixIndex)+""
+    " a_light:"+IntToStr(m_RenderShaderLightIndex)+""
+    " t_normal:"+IntToStr(m_RenderShaderTextureNormalIndex)+""
+    " t_image:"+IntToStr(m_RenderShaderTextureIndex)+""
+    " texture_mode:"+IntToStr(m_RenderShaderTextureModeIndex)+""
+    " texture_opacity:"+IntToStr(m_RenderShaderTextureOpacityIndex)+""
+    " texture_off_x:"+IntToStr(m_RenderShaderTextureOffXIndex)+""
+    " texture_off_y:"+IntToStr(m_RenderShaderTextureOffYIndex)+""
+    " texture_scale_x:"+IntToStr(m_RenderShaderTextureScaleXIndex)+""
+    " texture_scale_y:"+IntToStr(m_RenderShaderTextureScaleYIndex)+""
+    " texture_rotation:"+IntToStr(m_RenderShaderTextureRotationIndex)+""
+    " t_image_2:"+IntToStr(m_RenderShaderTexture2Index)+""
+    " texture_2_mode:"+IntToStr(m_RenderShaderTexture2ModeIndex)+""
+    " texture_2_opacity:"+IntToStr(m_RenderShaderTexture2OpacityIndex)+""
+    " texture_2_off_x:"+IntToStr(m_RenderShaderTexture2OffXIndex)+""
+    " texture_2_off_y:"+IntToStr(m_RenderShaderTexture2OffYIndex)+""
+    " texture_2_scale_x:"+IntToStr(m_RenderShaderTexture2ScaleXIndex)+""
+    " texture_2_scale_y:"+IntToStr(m_RenderShaderTexture2ScaleYIndex)+""
+    " texture_2_rotation:"+IntToStr(m_RenderShaderTexture2RotationIndex)+""
+    " t_array:"+IntToStr(m_RenderShaderTextureArrayIndex)+""
+    " t_cellmem:"+IntToStr(m_RenderShaderCellMemIndex)+""
+    " t_cellstate:"+IntToStr(m_RenderShaderCellStateIndex)+""
+    " t_position:"+IntToStr(m_RenderShaderTexturePositionIndex)+""
+    " eye:"+IntToStr(m_RenderShaderEyeIndex)+""
+    //" t_scale:"+IntToStr(m_RenderShaderTextureScaleIndex)+""
+
+    ));
+
 }
 
 void moEffectParticlesFractal::Regenerate() {
@@ -3110,9 +3220,9 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
             glRotatef(  rx, V.X(), V.Y(), V.Z() );
             glRotatef(  ry, W.X(), W.Y(), W.Z() );
 
-            ssx = ssx*scalex;
-            ssy = ssy*scaley;
-            ssz = ssz*scalez;
+            sx = ssx*scalex;
+            sy = ssy*scaley;
+            sz = ssz*scalez;
             if (m_pTexBuf) {
                 int irandom = int( float(m_nImages-1) * g );
                 if (imaterial>=0) irandom = imaterial;
@@ -3200,7 +3310,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     moMaterial Mat;
       Mat.m_Map = pTMan->GetTexture( m_Config.Texture( moR(PARTICLES_TEXTURE)).GetMOId()  );//pTMan->GetTexture(pTMan->GetTextureMOId( "default", false ));
       Mat.m_MapGLId = Mat.m_Map->GetGLId();
-      Mat.m_Color = moColor( 1.0, 1.0, 1.0 );
+      Mat.m_Color = moVector3f(m_Color.X(),m_Color.Y(),m_Color.Z());//moColor( 1.0, 1.0, 1.0 );
       Mat.m_fTextWSegments = 13.0f;
       Mat.m_fTextHSegments = 13.0f;
       Mat.m_vLight = moVector3f( -1.0, -1.0, -1.0 );
@@ -3210,6 +3320,10 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
       Mat.m_PolygonMode = MO_POLYGONMODE_FILL;
       Mat.m_fWireframeWidth = 0.0005f;
       Mat.m_fOpacity = alpha;
+
+    moMaterial Mat2;
+      Mat2.m_Map = pTMan->GetTexture( m_Config.Texture( moR(PARTICLES_TEXTURE_2)).GetMOId()  );//pTMan->GetTexture(pTMan->GetTextureMOId( "default", false ));
+      Mat2.m_MapGLId = Mat2.m_Map->GetGLId();
 
     ///PARTICLES
     ///MESH MODEL (aka SCENE NODE)
@@ -3245,7 +3359,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
   if (m_EffectState.tempo.Duration()<ttime) {
     MODebug2->Message("Time:" + IntToStr(m_EffectState.tempo.Duration()) );
   }
-  if (m_RenderShader.Initialized() && m_EffectState.tempo.Duration()>ttime) {
+  if (m_RenderShader.Initialized() && (m_EffectState.tempo.Duration()>ttime || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE  ) ) {
 
     m_RenderShader.StartShader();
 
@@ -3280,7 +3394,18 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     }
 
     glUniformMatrix4fv( m_RenderShaderProjectionMatrixIndex, 1, GL_FALSE, pfv );
-    //glUniform1i( m_RenderShaderTextureIndex, 0 );///Pass TEXTURE UNIT 0 (use glActiveTexture and glBindTexture )
+
+    glActiveTexture( GL_TEXTURE0 + 2);
+    glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
+    glBindTexture( GL_TEXTURE_2D_ARRAY,  0 );
+    glUniform1i( m_RenderShaderTextureIndex, 2 );///
+
+    glActiveTexture( GL_TEXTURE0 + 3);
+    glBindTexture( GL_TEXTURE_2D, Mat2.m_MapGLId );
+    glBindTexture( GL_TEXTURE_2D_ARRAY,  0 );
+    glUniform1i( m_RenderShaderTexture2Index, 3 );///
+
+
     glActiveTexture( GL_TEXTURE0 + 5);
     glBindTexture( GL_TEXTURE_2D, 0);
     glBindTexture( GL_TEXTURE_2D_ARRAY, m_texture_array );
@@ -3292,6 +3417,27 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
     glUniform1i( m_RenderShaderCellMemIndex, 6 );
 
+    glActiveTexture( GL_TEXTURE0 + 7);
+    glBindTexture( GL_TEXTURE_2D, m_pStateTextureFinal->GetGLId());
+    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+    glUniform1i( m_RenderShaderCellStateIndex, 7 );
+
+    glActiveTexture( GL_TEXTURE0 + 1);
+    glBindTexture( GL_TEXTURE_2D, m_pPositionTextureFinal->GetGLId());
+    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+    glUniform1i( m_RenderShaderTexturePositionIndex, 1 );
+
+    glActiveTexture( GL_TEXTURE0 + 4);
+    glBindTexture( GL_TEXTURE_2D, m_pNormalTextureFinal->GetGLId());
+    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+    glUniform1i( m_RenderShaderTextureNormalIndex, 4 );
+    /*
+    glActiveTexture( GL_TEXTURE0 + 2);
+    glBindTexture( GL_TEXTURE_2D, m_pScaleTextureFinal->GetGLId());
+    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+    glUniform1i( m_RenderShaderTextureScaleIndex, 2 );
+    */
+
     //glUniform1i( m_RenderShaderColsIndex, m_cols );
     //glUniform1i( m_RenderShaderRowsIndex, m_rows );
     //glUniform1f( m_EmitterShaderWireframeWidthIndex, Mat.m_fWireframeWidth );
@@ -3299,10 +3445,29 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     //glUniform1f( m_EmitterShaderTexHSegmentsIndex, Mat.m_fTextHSegments );
     glUniform3fv( m_RenderShaderLightIndex, 1, &Mat.m_vLight[0] );
     glUniform3fv( m_RenderShaderColorIndex, 1, &Mat.m_Color[0] );
+    glUniform3fv( m_RenderShaderLightIndex, 1, &m_Physics.m_SourceLightVector[0] );
+    glUniform3fv( m_RenderShaderEyeIndex, 1, &m_Physics.m_EyeVector[0] );
     glUniform1f( m_RenderShaderOpacityIndex, Mat.m_fOpacity );
 
-    glUniform1iARB( m_RenderShaderColsIndex, m_cols );
-    glUniform1iARB( m_RenderShaderRowsIndex, m_rows );
+    glUniform1i( m_RenderShaderTextureModeIndex, texture_mode );
+    glUniform1f( m_RenderShaderTextureOpacityIndex, texture_opacity );
+    glUniform1f( m_RenderShaderTextureOffXIndex, texture_off_x );
+    glUniform1f( m_RenderShaderTextureOffYIndex, texture_off_y );
+    glUniform1f( m_RenderShaderTextureScaleXIndex, texture_scale_x );
+    glUniform1f( m_RenderShaderTextureScaleYIndex, texture_scale_y );
+    glUniform1f( m_RenderShaderTextureRotationIndex, texture_rotation );
+
+
+    glUniform1i( m_RenderShaderTexture2ModeIndex, texture_2_mode );
+    glUniform1f( m_RenderShaderTexture2OpacityIndex, texture_2_opacity );
+    glUniform1f( m_RenderShaderTexture2OffXIndex, texture_2_off_x );
+    glUniform1f( m_RenderShaderTexture2OffYIndex, texture_2_off_y );
+    glUniform1f( m_RenderShaderTexture2ScaleXIndex, texture_2_scale_x );
+    glUniform1f( m_RenderShaderTexture2ScaleYIndex, texture_2_scale_y );
+    glUniform1f( m_RenderShaderTexture2RotationIndex, texture_2_rotation );
+
+    glUniform1i( m_RenderShaderColsIndex, m_cols );
+    glUniform1i( m_RenderShaderRowsIndex, m_rows );
 
     moVector3f scalev( scalex*sizex, scaley*sizey, scalez*sizez);
     glUniform3fv( m_RenderShaderScaleVIndex, 1, &scalev[0] );
@@ -3318,12 +3483,13 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     glEnableVertexAttribArray( m_RenderShaderScaleIndex );
     glVertexAttribPointer( m_RenderShaderScaleIndex, 4, GL_FLOAT, false, 0, &scaleArray[0] );
 
+    glEnableVertexAttribArray( m_RenderShaderNormalIndex );
+    glVertexAttribPointer( m_RenderShaderNormalIndex, 4, GL_FLOAT, false, 0, &normalArray[0] );
+
     //glEnableVertexAttribArray( m_RenderShaderMaterialsIndex );
     //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
     //glVertexAttribPointer( m_RenderShaderMaterialsIndex, 4, GL_FLOAT, false, 0, &materialArray[0] );
 
-    //glEnableVertexAttribArray( m_RenderShaderNormalIndex );
-    //glVertexAttribPointer( m_RenderShaderNormalIndex, 4, GL_FLOAT, false, 0, &orientationArray[0] );
     glEnableVertexAttribArray( m_RenderShaderOrientationIndex );
     glVertexAttribPointer( m_RenderShaderOrientationIndex, 4, GL_FLOAT, false, 0, &orientationArray[0] );
 
@@ -3345,7 +3511,9 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     glDisableVertexAttribArray( m_RenderShaderPositionIndex );
     glDisableVertexAttribArray( m_RenderShaderColorsIndex );
     glDisableVertexAttribArray( m_RenderShaderScaleIndex );
-    //glDisableVertexAttribArray( m_RenderShaderNormalIndex );
+    glDisableVertexAttribArray( m_RenderShaderOrientationIndex );
+
+    glDisableVertexAttribArray( m_RenderShaderNormalIndex );
     //glDisableVertexAttribArray( m_RenderShaderTexCoordIndex );
     //glDisableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
 
@@ -3491,8 +3659,11 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
     glEnd();*/
 
     if (g_fVBOSupported) {
-        //DrawParticlesFractal( tempogral, parentstate );
-        DrawParticlesFractalVBO( tempogral, parentstate );
+        if (geometry_shader_off) {
+          DrawParticlesFractal( tempogral, parentstate );
+        } else {
+          DrawParticlesFractalVBO( tempogral, parentstate );
+        }
     } else {
         DrawParticlesFractal( tempogral, parentstate );
     }
@@ -3791,6 +3962,11 @@ void moEffectParticlesFractal::RegisterFunctions()
     RegisterFunction("DumpMemory");//35
     RegisterFunction("LoadMemory");//36
 
+    RegisterFunction("CellRotate");//37
+    RegisterFunction("CellGrow");//38
+
+    RegisterFunction("CellUpdateProgram");//39
+
 /*
     // 05: yellow 01
     RegisterFunction("cellGrow");//30 scale
@@ -3961,16 +4137,20 @@ switch (iFunctionNumber - m_iMethodBase)
         case 36:
             ResetScriptCalling();
             return luaLoadMemory(vm);
-        /*case 29:
+        case 37:
             ResetScriptCalling();
             return luaCellRotate(vm);
-        case 30:
+        case 38:
             ResetScriptCalling();
             return luaCellGrow(vm);
-        case 31:
+        case 39:
+            ResetScriptCalling();
+            return luaCellUpdateProgram(vm);
+        /*case 39:
             ResetScriptCalling();
             return luaCellAcc(vm);
-*/
+        */
+
         default:
             NextScriptCalling();
             return moMoldeoObject::ScriptCalling( vm, iFunctionNumber );
@@ -3999,6 +4179,27 @@ int moEffectParticlesFractal::luaCellBeginProgram(moLuaVirtualMachine& vm) {
 
     return 1;
 }
+
+
+int moEffectParticlesFractal::luaCellUpdateProgram(moLuaVirtualMachine& vm) {
+    lua_State *state = (lua_State *) vm;
+
+    lua_id_cell = (MOint) lua_tonumber (state, 1);
+    MODebug2->Message( moText("CellUpdateProgram: ") + IntToStr(lua_id_cell) );
+
+    if (cellcodeArray) {
+        cell_position_j = lua_id_cell / m_cols;
+        cell_position_i = lua_id_cell - cell_position_j*m_cols;
+        cell_position = cell_position_i*4*m_cellcode + cell_position_j*4*m_cellcode*m_cellcode*m_cols;
+        long next_line = 4*m_cellcode*m_cols;
+        //update program begin in third line
+        cell_position+= 2*next_line;
+        cellcodeArray[cell_position] = 2.0;
+        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+    }
+}
+
 
 int moEffectParticlesFractal::luaCellAge(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;
@@ -4088,6 +4289,55 @@ int moEffectParticlesFractal::luaCellDie(moLuaVirtualMachine& vm) {
 
     return 0;
 }
+
+int moEffectParticlesFractal::luaCellRotate(moLuaVirtualMachine& vm) {
+    lua_State *state = (lua_State *) vm;
+
+    float rx = (float) lua_tonumber (state, 1);
+    float ry = (float) lua_tonumber (state, 2);
+    float rz = (float) lua_tonumber (state, 3);
+    MODebug2->Message( moText("CellRotate: ") + IntToStr(lua_id_cell)+moText(" rx: ")+FloatToStr(rx)
+                                                                    +moText(" ry: ")+FloatToStr(ry)
+                                                                    +moText(" rz: ")+FloatToStr(rz) );
+
+    if (cellcodeArray) {
+        long cell_position_2nd = cell_position + 4*m_cellcode*m_cols;
+        cellcodeArray[cell_position_2nd+4] = 0.22;
+        cellcodeArray[cell_position_2nd+5] = rx;
+        cellcodeArray[cell_position_2nd+6] = ry;
+        cellcodeArray[cell_position_2nd+7] = rz;
+        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+    }
+
+
+    return 0;
+}
+
+int moEffectParticlesFractal::luaCellGrow(moLuaVirtualMachine& vm) {
+    lua_State *state = (lua_State *) vm;
+
+    float sx = (float) lua_tonumber (state, 1);
+    float sy = (float) lua_tonumber (state, 2);
+    float sz = (float) lua_tonumber (state, 3);
+    MODebug2->Message( moText("CellGrow: ") + IntToStr(lua_id_cell)+moText(" sx: ")+FloatToStr(sx)
+                                                                    +moText(" sy: ")+FloatToStr(sy)
+                                                                    +moText(" sz: ")+FloatToStr(sz) );
+
+    if (cellcodeArray) {
+        long cell_position_2nd = cell_position + 4*m_cellcode*m_cols;
+        cellcodeArray[cell_position_2nd+0] = 0.21;
+        cellcodeArray[cell_position_2nd+1] = sx;
+        cellcodeArray[cell_position_2nd+2] = sy;
+        cellcodeArray[cell_position_2nd+3] = sz;
+        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+    }
+
+
+    return 0;
+}
+
 
 int moEffectParticlesFractal::luaCellEndProgram(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;

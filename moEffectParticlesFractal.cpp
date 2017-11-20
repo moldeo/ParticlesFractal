@@ -3309,7 +3309,9 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     ///MATERIAL
     moMaterial Mat;
       Mat.m_Map = pTMan->GetTexture( m_Config.Texture( moR(PARTICLES_TEXTURE)).GetMOId()  );//pTMan->GetTexture(pTMan->GetTextureMOId( "default", false ));
-      Mat.m_MapGLId = Mat.m_Map->GetGLId();
+      if (Mat.m_Map) {
+        Mat.m_MapGLId = Mat.m_Map->GetGLId();
+      }
       Mat.m_Color = moVector3f(m_Color.X(),m_Color.Y(),m_Color.Z());//moColor( 1.0, 1.0, 1.0 );
       Mat.m_fTextWSegments = 13.0f;
       Mat.m_fTextHSegments = 13.0f;
@@ -3323,7 +3325,9 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
 
     moMaterial Mat2;
       Mat2.m_Map = pTMan->GetTexture( m_Config.Texture( moR(PARTICLES_TEXTURE_2)).GetMOId()  );//pTMan->GetTexture(pTMan->GetTextureMOId( "default", false ));
-      Mat2.m_MapGLId = Mat2.m_Map->GetGLId();
+      if (Mat2.m_Map) {
+        Mat2.m_MapGLId = Mat2.m_Map->GetGLId();
+      }
 
     ///PARTICLES
     ///MESH MODEL (aka SCENE NODE)

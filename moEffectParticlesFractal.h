@@ -445,6 +445,8 @@ enum moParticlesFractalParamIndex {
 	PARTICLES_TEXTURE_2_SCALE_Y,
 	PARTICLES_TEXTURE_2_ROTATION,
 
+	PARTICLES_DIFFMAX,
+
 	PARTICLES_GEOMETRY_MODE,
 	PARTICLES_GEOMETRY_SHADER_OFF,
 	PARTICLES_FEATHER_SEGMENTS,
@@ -955,6 +957,10 @@ class moEffectParticlesFractal : public moEffect
         //int luaCell(moLuaVirtualMachine& vm);
         int luaCellUpdateProgram(moLuaVirtualMachine& vm);
 
+        int luaCellLink(moLuaVirtualMachine& vm);
+        int luaCellUnlink(moLuaVirtualMachine& vm);
+
+
         int luaCellEndProgram(moLuaVirtualMachine& vm);
         int luaCellDumpProgram(moLuaVirtualMachine& vm);
 
@@ -1015,6 +1021,8 @@ class moEffectParticlesFractal : public moEffect
         float feather_length;
         float feather_head;
         float feather_dynamic;
+
+        float diffmax;
 
 
         bool ortho;
@@ -1331,6 +1339,8 @@ class moEffectParticlesFractal : public moEffect
         MOuint m_RenderShaderTexture2ScaleXIndex;
         MOuint m_RenderShaderTexture2ScaleYIndex;
         MOuint m_RenderShaderTexture2RotationIndex;
+
+        MOuint m_RenderShaderDiffMaxIndex;
 
         MOuint m_RenderShaderTextureNormalIndex;
 

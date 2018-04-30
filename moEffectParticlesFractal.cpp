@@ -36,65 +36,6 @@
 moDefineDynamicArray( moParticlesFractalArray )
 
 
-moTextureFilterVelocity::moTextureFilterVelocity() : moTextureFilter() {
-  m_gravity = -1;
-}
-
-
-moTextureFilterVelocity::~moTextureFilterVelocity() {
-}
-
-MOboolean
-moTextureFilterVelocity::Init(moGLManager* p_glman, moRenderManager* p_renderman, moTextureArray &p_src_tex, moTextureArray &p_dest_tex, moShader *p_shader, moTextFilterParam *p_params) {
-
-  MOboolean result = moTextureFilterVelocity::Init( p_glman, p_renderman, p_src_tex, p_dest_tex, p_shader, p_params);
-
-  moShader* m_shader = p_shader;
-	moShaderGLSL* pglsl = NULL;
-
-#ifdef SHADER_CG
-    moShaderCG* pcg = NULL;
-#endif
-
-	if (m_shader->GetType()==MO_SHADER_CG) {
-#ifdef SHADER_CG
-        pcg = (moShaderCG*)m_shader;
-#endif
-	} else {
-        pglsl = (moShaderGLSL*)m_shader;
-	}
-
-  moText uname = moText("gravity");
-  if (pglsl) m_gravity = pglsl->GetUniformID(uname);
-
-  return result;
-}
-
-
-void
-moTextureFilterVelocity::Apply( moMoldeoObject *p_src_mob, moTempo* p_tempo, MOfloat p_fade, moTextFilterParam *p_params ) {
-
-  moTextureFilter::Apply( p_src_mob, p_tempo, p_fade, p_params );
-
-}
-
-
-void
-moTextureFilterVelocity::SetupShader(MOint w, MOint h, moTempo *p_tempo, MOfloat p_fade, moTextFilterParam *p_params, moMoldeoObject* p_src_object) {
-
-  moTextureFilter::SetupShader( w, h, p_tempo, p_fade, p_params, p_src_object );
-
-	if (-1 < m_gravity && p_src_object) {
-        if (p_src_object->GetConfig()) {
-          double gravity = p_src_object->GetConfig()->Eval( moR(PARTICLES_GRAVITY) );
-          glUniform1fARB( m_gravity, gravity );
-        }
-	    //(m_shader->GetType() == (MOuint)MO_SHADER_GLSL) ? glUniform1fARB(m_fade_const, p_fade) : m_fade_const=0;/*cgGLSetParameter1f( (CGparameter)m_fade_const, p_fade )*/
-	}
-
-}
-
-
 //========================
 //  Efecto
 //========================
@@ -4929,9 +4870,3 @@ int moEffectParticlesFractal::luaReInit(moLuaVirtualMachine& vm ) {
 
     return 0;
 }
-
-
-
-
-
-

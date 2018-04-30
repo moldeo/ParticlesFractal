@@ -762,22 +762,8 @@ moDeclareDynamicArray( moParticlesFractal*, moParticlesFractalArray );
 typedef std::map< double, moParticlesFractal* > TMapDepthToParticleSimple;
 
 
-class moTextureFilterVelocity : public moTextureFilter {
 
-  public:
-    moTextureFilterVelocity();
-    virtual ~moTextureFilterVelocity();
-
-    virtual MOboolean Init(moGLManager* p_glman, moRenderManager* p_renderman, moTextureArray &p_src_tex, moTextureArray &p_dest_tex, moShader *p_shader, moTextFilterParam *p_params = NULL);
-
-    virtual void Apply( moMoldeoObject *p_src_mob = NULL, moTempo* p_tempo = NULL, MOfloat p_fade = 1.0, moTextFilterParam *p_params = NULL );
-    virtual void SetupShader(MOint w, MOint h, moTempo *p_tempo, MOfloat p_fade, moTextFilterParam *p_params, moMoldeoObject* p_src_object = NULL);
-
-    GLint m_gravity;
-};
-
-
-/// Clase Particle Simple
+/// Clase Particle Fractal
 /**
  *
  *

@@ -63,6 +63,12 @@
 
 #define COSPI6 0.866025404
 
+/// Reference to Cell Code language
+/**
+  https://docs.google.com/spreadsheets/d/1DvcC5bnDPubQiTJFNuCGK4MrtGrVqnXdf4kV5KaEt0U/edit#gid=0
+*/
+
+
 ///Emitter Geometry Mode
 /**
 * \if spanish
@@ -822,6 +828,11 @@ class moEffectParticlesFractal : public moEffect
         unsigned int    m_nVBOTexCoords;                    // Texture Coordinate VBO Name
 
         bool g_fVBOSupported;
+
+        void DrawEmitions( float x, float y, float z, float dx, float dy, float dz, float sx, float sy );
+        void DrawCohesion( float x, float y, float z, float dx, float dy, float dz, float sx, float sy );
+        void DrawTexture( moTexture* p_texture, float x, float y, float z, float sx, float sy );
+
     private:
 
         ///Actualizar el dt para iteracion de particulas
@@ -928,6 +939,8 @@ class moEffectParticlesFractal : public moEffect
 
         int luaCellAge(moLuaVirtualMachine& vm);
         int luaCellDuplicate(moLuaVirtualMachine& vm);
+        int luaCellElongate(moLuaVirtualMachine& vm);
+        int luaCellBranch(moLuaVirtualMachine& vm);
         int luaCellMutate(moLuaVirtualMachine& vm);
         int luaCellCrossover(moLuaVirtualMachine& vm);
         int luaCellDie(moLuaVirtualMachine& vm);
@@ -1274,6 +1287,7 @@ class moEffectParticlesFractal : public moEffect
         int     m_nImages;
         MOuint m_texture_array;
 
+
         int w;
         int h;
 
@@ -1284,6 +1298,9 @@ class moEffectParticlesFractal : public moEffect
         moFBManager* pFMan;
 
         int m_emitions_w,m_emitions_h;
+        MOuint m_emitions_array;
+        MOuint m_emitions_array_it;
+        moTextureBuffer*  m_pEmitionsArray;
         moShaderGLSL m_EmitterShader;
         moFBO* m_pFBO_Emitions;
         moTexture*  m_pEmitionsTexture;//morfogenes?
@@ -1294,6 +1311,25 @@ class moEffectParticlesFractal : public moEffect
         GLint m_EmitterShaderColsIndex;
         GLint m_EmitterShaderRowsIndex;
 
+        int m_cohesion_w,m_cohesion_h;
+        MOuint m_cohesion_array;
+        MOuint m_cohesion_array_it;
+        moTextureBuffer*  m_pCohesionArray;
+        moShaderGLSL m_CohesionShader;
+        moFBO* m_pFBO_Cohesion;
+        moTexture*  m_pCohesionTexture;//morfogenes?
+        moTexture*  m_pCohesionTextureSwap;//morfogenes?
+        GLint m_CohesionShaderPositionIndex;
+        GLint m_CohesionShaderTexturePositionIndex;
+        GLint m_CohesionShaderTextureIndex;
+        GLint m_CohesionShaderProjectionMatrixIndex;
+        GLint m_CohesionShaderPositionMatrixIndex;
+        GLint m_CohesionShaderColsIndex;
+        GLint m_CohesionShaderRowsIndex;
+        GLint m_CohesionShaderTextureEmitionsArrayIndex;
+        GLint m_CohesionShaderEmitionWIndex;
+        GLint m_CohesionShaderEmitionHIndex;
+
         moShaderGLSL m_RenderShader;
         MOuint m_RenderShaderColorIndex;
         MOuint m_RenderShaderOpacityIndex;
@@ -1303,6 +1339,7 @@ class moEffectParticlesFractal : public moEffect
         MOuint m_RenderShaderCellStateIndex;
         MOuint m_RenderShaderTexturePositionIndex;
         MOuint m_RenderShaderTextureScaleIndex;
+        MOuint m_RenderShaderTextureOrientationIndex;
 
         MOuint m_RenderShaderScaleIndex;
         MOuint m_RenderShaderScaleVIndex;

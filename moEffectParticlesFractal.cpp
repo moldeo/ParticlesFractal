@@ -2586,6 +2586,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_ConfidenceTextureLoadedName*/
                       + " "+m_pCellCodeTextureSwap->GetName()
                       + " " + m_pCellMemoryTextureSwap->GetName()
+                      + " " + m_pNormalTextureSwap->GetName()
 
                       + moText(" ")+this->GetLabelName()+moText("/Orientation.cfg" )
                       + " " + m_pOrientationTextureSwap->GetName() );
@@ -2610,6 +2611,8 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
 
                       + " " + m_pCellCodeTexture->GetName()
                       + " " + m_pCellMemoryTexture->GetName()
+                      + " " + m_pNormalTexture->GetName()
+
 /*                      + " " + m_VariabilityTextureLoadedName
                       + " " + m_ConfidenceTextureLoadedName*/
                       //+ moText(" ")+m_pCellCodeTexture->GetName()
@@ -2783,7 +2786,8 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_pScaleTexture->GetName()
 ///+ " " + m_pColorTexture->GetName()
 + " " + m_pCellCodeTexture->GetName()
-+ " " + m_MediumTextureLoadedName
++ " " + m_pCellMemoryTexture->GetName()
+                      + " " + m_pOrientationTextureSwap->GetName()
                       /// el color se puede interpretar para zonificar las particulas: rojo a la izquierda de la pantalla, azul a la derecha*/
 //                      + " " + m_AltitudeTextureLoadedName
                       /// la altidud a su vez puede servir para dar una profundidad al valor...
@@ -2815,7 +2819,8 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_pScaleTextureSwap->GetName()
 //+ " " + m_pColorTextureSwap->GetName()
 + " " + m_pCellCodeTextureSwap->GetName()
-+ " " + m_MediumTextureLoadedName
++ " " + m_pCellMemoryTextureSwap->GetName()
++ " " + m_pOrientationTexture->GetName()
 //                      + " " + m_AltitudeTextureLoadedName
 //                      + " " + m_VariabilityTextureLoadedName
 //                      + " " + m_ConfidenceTextureLoadedName
@@ -3692,6 +3697,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
   && (m_EffectState.tempo.Duration()>ttime || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE  ) ) {
 
     m_RenderShader.StartShader();
+    glLineWidth(2.0);
 
     moGLMatrixf& PMatrix( Camera3D );
     const moGLMatrixf& MMatrix( Model );
@@ -4005,6 +4011,8 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
           DrawParticlesFractal( tempogral, parentstate );
         } else {
           DrawParticlesFractalVBO( tempogral, parentstate );
+          //glRotatef(  35, 00.0, 00.0, 1.0 );
+          //DrawParticlesFractalVBO( tempogral, parentstate );
 
         }
     } else {
@@ -4051,6 +4059,8 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
       if (m_pScaleTextureFinal) DrawTexture( m_pScaleTextureFinal, -0.35, 0.1, 0.0, 0.1, 0.1  );
       if (m_pVelocityTextureFinal) DrawTexture( m_pVelocityTextureFinal, -0.35, -0.1, 0.0, 0.1, 0.1  );
       if (m_pPositionTextureFinal) DrawTexture( m_pPositionTextureFinal, -0.35, -0.2, 0.0, 0.1, 0.1  );
+
+      if (m_pNormalTextureFinal) DrawTexture( m_pNormalTextureFinal, 0.35, 0.2, 0.0, 0.1, 0.1  );
 
       if (m_emitions_array) {
         //DrawTexture( m_pEmitionsTexture, 0.0, 0.0, 0.0, 0.2  );
@@ -4344,6 +4354,8 @@ void moEffectParticlesFractal::RegisterFunctions()
     RegisterFunction("CellElongate");//42
     RegisterFunction("CellBranch");//43
 
+    RegisterFunction("CellLoadProgram");//44
+    RegisterFunction("CellSaveProgram");//45
 
 /*
     // 05: yellow 01
@@ -4537,6 +4549,14 @@ switch (iFunctionNumber - m_iMethodBase)
         case 43:
             ResetScriptCalling();
             return luaCellBranch(vm);
+
+        case 44:
+            ResetScriptCalling();
+            return luaCellLoadProgram(vm);
+
+        case 45:
+            ResetScriptCalling();
+            return luaCellSaveProgram(vm);
         /*case 39:
             ResetScriptCalling();
             return luaCellAcc(vm);
@@ -4562,8 +4582,8 @@ int moEffectParticlesFractal::luaCellBeginProgram(moLuaVirtualMachine& vm) {
         cell_position_i = lua_id_cell - cell_position_j*m_cols;
         cell_position = cell_position_i*4*m_cellcode + cell_position_j*4*m_cellcode*m_cellcode*m_cols;
         cellcodeArray[cell_position] = 1.0;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     lua_pushnumber(state, (lua_Number) 1 );
@@ -4586,23 +4606,24 @@ int moEffectParticlesFractal::luaCellUpdateProgram(moLuaVirtualMachine& vm) {
         //update program begin in third line
         cell_position+= 2*next_line;
         cellcodeArray[cell_position] = 2.0;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 }
+
 
 
 int moEffectParticlesFractal::luaCellAge(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;
 
     float delta_age = (float) lua_tonumber (state, 1);
-    MODebug2->Message( moText("CellAge: ") + IntToStr(lua_id_cell)+moText(" delta: ")+FloatToStr(delta_age) );
+    //MODebug2->Message( moText("CellAge: ") + IntToStr(lua_id_cell)+moText(" delta: ")+FloatToStr(delta_age) );
 
     if (cellcodeArray) {
         cellcodeArray[cell_position+1] = 0.11;
         cellcodeArray[cell_position+2] = delta_age;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
 
@@ -4616,8 +4637,8 @@ int moEffectParticlesFractal::luaCellDuplicate(moLuaVirtualMachine& vm) {
     float dx = (float) lua_tonumber (state, 2);
     float dy = (float) lua_tonumber (state, 3);
     float dz = (float) lua_tonumber (state, 4);
-    MODebug2->Message( moText("CellDuplicate: ") + IntToStr(lua_id_cell)
-                       +moText(" maturity: ")+FloatToStr(maturity) );
+    //MODebug2->Message( moText("CellDuplicate: ") + IntToStr(lua_id_cell)
+    //                   +moText(" maturity: ")+FloatToStr(maturity) );
 
     if (cellcodeArray) {
         cellcodeArray[cell_position+3] = 0.12;
@@ -4625,8 +4646,8 @@ int moEffectParticlesFractal::luaCellDuplicate(moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position+5] = dx;
         cellcodeArray[cell_position+6] = dy;
         cellcodeArray[cell_position+7] = dz;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;
@@ -4639,8 +4660,8 @@ int moEffectParticlesFractal::luaCellElongate( moLuaVirtualMachine& vm) {
     float dx = (float) lua_tonumber (state, 2);
     float dy = (float) lua_tonumber (state, 3);
     float dz = (float) lua_tonumber (state, 4);
-    MODebug2->Message( moText("CellElongate: ") + IntToStr(lua_id_cell)
-                       +moText(" maturity: ")+FloatToStr(maturity) );
+    //MODebug2->Message( moText("CellElongate: ") + IntToStr(lua_id_cell)
+    //                   +moText(" maturity: ")+FloatToStr(maturity) );
 
     if (cellcodeArray) {
         cellcodeArray[cell_position+3] = 0.121;
@@ -4648,8 +4669,8 @@ int moEffectParticlesFractal::luaCellElongate( moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position+5] = dx;
         cellcodeArray[cell_position+6] = dy;
         cellcodeArray[cell_position+7] = dz;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;
@@ -4662,8 +4683,8 @@ int moEffectParticlesFractal::luaCellBranch( moLuaVirtualMachine& vm) {
     float dx = (float) lua_tonumber (state, 2);
     float dy = (float) lua_tonumber (state, 3);
     float dz = (float) lua_tonumber (state, 4);
-    MODebug2->Message( moText("CellBranch: ") + IntToStr(lua_id_cell)
-                       +moText(" maturity: ")+FloatToStr(maturity) );
+    //MODebug2->Message( moText("CellBranch: ") + IntToStr(lua_id_cell)
+    //                   +moText(" maturity: ")+FloatToStr(maturity) );
 
     if (cellcodeArray) {
         cellcodeArray[cell_position+3] = 0.122;
@@ -4671,8 +4692,8 @@ int moEffectParticlesFractal::luaCellBranch( moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position+5] = dx;
         cellcodeArray[cell_position+6] = dy;
         cellcodeArray[cell_position+7] = dz;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;
@@ -4683,16 +4704,16 @@ int moEffectParticlesFractal::luaCellMutate(moLuaVirtualMachine& vm) {
 
     float mutation_cell = (float) lua_tonumber (state, 1);
     float mutation_randomness = (float) lua_tonumber (state, 1);
-    MODebug2->Message(  moText("CellMutate: ") + IntToStr(lua_id_cell)
-                        +moText(" mutation id cell: ")+FloatToStr(mutation_cell)
-                        +moText(" mutation randomness: ")+FloatToStr(mutation_randomness) );
+    //MODebug2->Message(  moText("CellMutate: ") + IntToStr(lua_id_cell)
+    //                    +moText(" mutation id cell: ")+FloatToStr(mutation_cell)
+    //                    +moText(" mutation randomness: ")+FloatToStr(mutation_randomness) );
 
     if (cellcodeArray) {
         cellcodeArray[cell_position+8] = 0.13;
         cellcodeArray[cell_position+9] = mutation_cell;
         cellcodeArray[cell_position+10] = mutation_randomness;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;
@@ -4703,15 +4724,15 @@ int moEffectParticlesFractal::luaCellCrossover(moLuaVirtualMachine& vm) {
 
     float mutation_cell_one = (float) lua_tonumber (state, 1);
     float mutation_cell_two = (float) lua_tonumber (state, 1);
-    MODebug2->Message(  moText("CellCrossover: ") + IntToStr(lua_id_cell)
-                        +moText(" crossover id cells: ")+FloatToStr(mutation_cell_one)+moText("x")+FloatToStr(mutation_cell_two) );
+    //MODebug2->Message(  moText("CellCrossover: ") + IntToStr(lua_id_cell)
+    //                    +moText(" crossover id cells: ")+FloatToStr(mutation_cell_one)+moText("x")+FloatToStr(mutation_cell_two) );
 
     if (cellcodeArray) {
         cellcodeArray[cell_position+11] = 0.14;
         cellcodeArray[cell_position+12] = mutation_cell_one;
         cellcodeArray[cell_position+13] = mutation_cell_two;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;
@@ -4722,12 +4743,12 @@ int moEffectParticlesFractal::luaCellDie(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;
 
     float die_age =  (float) lua_tonumber (state, 1);
-    MODebug2->Message( moText("CellDie: ") + IntToStr(lua_id_cell)+moText(" die age: ")+FloatToStr(die_age) );
+    //MODebug2->Message( moText("CellDie: ") + IntToStr(lua_id_cell)+moText(" die age: ")+FloatToStr(die_age) );
     if (cellcodeArray) {
         cellcodeArray[cell_position+14] = 0.15;
         cellcodeArray[cell_position+15] = die_age;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;
@@ -4739,9 +4760,9 @@ int moEffectParticlesFractal::luaCellRotate(moLuaVirtualMachine& vm) {
     float rx = (float) lua_tonumber (state, 1);
     float ry = (float) lua_tonumber (state, 2);
     float rz = (float) lua_tonumber (state, 3);
-    MODebug2->Message( moText("CellRotate: ") + IntToStr(lua_id_cell)+moText(" rx: ")+FloatToStr(rx)
-                                                                    +moText(" ry: ")+FloatToStr(ry)
-                                                                    +moText(" rz: ")+FloatToStr(rz) );
+    //MODebug2->Message( moText("CellRotate: ") + IntToStr(lua_id_cell)+moText(" rx: ")+FloatToStr(rx)
+    //                                                                +moText(" ry: ")+FloatToStr(ry)
+    //                                                                +moText(" rz: ")+FloatToStr(rz) );
 
     if (cellcodeArray) {
         long cell_position_2nd = cell_position + 4*m_cellcode*m_cols;
@@ -4749,8 +4770,8 @@ int moEffectParticlesFractal::luaCellRotate(moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position_2nd+5] = rx;
         cellcodeArray[cell_position_2nd+6] = ry;
         cellcodeArray[cell_position_2nd+7] = rz;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
 
@@ -4763,9 +4784,9 @@ int moEffectParticlesFractal::luaCellGrow(moLuaVirtualMachine& vm) {
     float sx = (float) lua_tonumber (state, 1);
     float sy = (float) lua_tonumber (state, 2);
     float sz = (float) lua_tonumber (state, 3);
-    MODebug2->Message( moText("CellGrow: ") + IntToStr(lua_id_cell)+moText(" sx: ")+FloatToStr(sx)
-                                                                    +moText(" sy: ")+FloatToStr(sy)
-                                                                    +moText(" sz: ")+FloatToStr(sz) );
+    //MODebug2->Message( moText("CellGrow: ") + IntToStr(lua_id_cell)+moText(" sx: ")+FloatToStr(sx)
+    //                                                                +moText(" sy: ")+FloatToStr(sy)
+    //                                                                +moText(" sz: ")+FloatToStr(sz) );
 
     if (cellcodeArray) {
         long cell_position_2nd = cell_position + 4*m_cellcode*m_cols;
@@ -4773,8 +4794,8 @@ int moEffectParticlesFractal::luaCellGrow(moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position_2nd+1] = sx;
         cellcodeArray[cell_position_2nd+2] = sy;
         cellcodeArray[cell_position_2nd+3] = sz;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
 
@@ -4786,23 +4807,115 @@ int moEffectParticlesFractal::luaCellEndProgram(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;
 
     //lua_id_cell = (MOint) lua_tonumber (state, 1);
-    MODebug2->Message( moText("CellEndProgram: ") + IntToStr(lua_id_cell) );
+    //MODebug2->Message( moText("CellEndProgram: ") + IntToStr(lua_id_cell) );
 
     if (cellcodeArray) {
         long cell_position_end = cell_position + (4*m_cellcode-1) + 4*(m_cellcode-1)*m_cellcode*m_cols ;
         cellcodeArray[cell_position_end] = -1.0;
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
 
     }
     return 0;
 }
 
 
+int moEffectParticlesFractal::luaCellLoadProgram(moLuaVirtualMachine& vm) {
+
+    lua_State *state = (lua_State *) vm;
+
+    moText lua_load_parameter = (char*) lua_tostring(state, 1);
+    MODebug2->Message( moText("CellLoadProgram:") +  lua_load_parameter);
+
+    ///put one 0 pixel at id_cell position?
+
+    if (cellcodeArray) {
+        if (lua_load_parameter!="") {
+          MODebug2->Message( moText("CellLoadProgram: trying to open ") +  lua_load_parameter);
+          lua_load_parameter = GetResourceManager()->GetDataMan()->GetDataPath()+moSlash+lua_load_parameter;
+          moFile cellcodefile( lua_load_parameter );
+          if (cellcodefile.Exists()) {
+            MODebug2->Message("CellLoadProgram: opening "+cellcodefile.GetCompletePath());
+
+            if (cellcodefile.GetExtension()==".cod") {
+              MODebug2->Message("CellLoadProgram: reading binary "+cellcodefile.GetCompletePath());
+              std::ifstream infile(lua_load_parameter,  std::ifstream::binary);
+              infile.read ((char*)cellcodeArray, 4*m_pCellCodeTextureFinal->GetWidth()*m_pCellCodeTextureFinal->GetHeight()*sizeof(GLfloat));
+              m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+              m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+            } else {
+              m_pCellCodeTexture->BuildFromFile( cellcodefile.GetCompletePath()  );
+              m_pCellCodeTextureSwap->BuildFromFile( cellcodefile.GetCompletePath()  );
+            }
+          }
+        } else {
+          m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+          m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        }
+    }
+
+    return 0;
+}
+
+int moEffectParticlesFractal::luaCellSaveProgram(moLuaVirtualMachine& vm) {
+
+  lua_State *state = (lua_State *) vm;
+
+  moText lua_save_parameter = (char*) lua_tostring(state, 1);
+  int lua_save_parameter_force = (int) lua_tonumber(state, 2);
+
+  MODebug2->Message( moText("CellSaveProgram: ") + lua_save_parameter + moText(" force rewrite:") + IntToStr(lua_save_parameter_force) );
+
+  if (cellcodeArray) {
+        if (lua_save_parameter=="") {
+         lua_save_parameter  = m_pResourceManager->GetDataMan()->GetDataPath()+moSlash+GetLabelName()+"_cellcode";
+        }
+        if (lua_save_parameter!="") {
+
+          lua_save_parameter  = m_pResourceManager->GetDataMan()->GetDataPath()+moSlash+lua_save_parameter;
+
+          MODebug2->Message( moText("CellSaveProgram: trying to save to ") +  lua_save_parameter);
+
+          moFile cellcodefile( lua_save_parameter);
+
+          if (cellcodefile.Exists() && lua_save_parameter_force!=1) {
+              MODebug2->Error( moText("CellSaveProgram: File already exists. Must use 1 as second parameter to force oerwriting."));
+          } else {
+            if (cellcodefile.GetExtension()==".cod") {
+
+                //glBindTexture( GL_TEXTURE_2D, m_pCellCodeTextureFinal->GetGLId() );
+                //glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, cellcodeArray );
+
+                std::ofstream outfile(lua_save_parameter);
+                outfile.write ((char*)cellcodeArray, 4*m_pCellCodeTextureFinal->GetWidth()*m_pCellCodeTextureFinal->GetHeight()*sizeof(GLfloat));
+
+            } else if (cellcodefile.GetExtension()==".exr") {
+
+              //lua_save_parameter = cellcodefile.GetFolderName()+moSlash+cellcodefile.GetFileName();
+              MODebug2->Message( moText("CellSaveProgram: trying to save EXR FORMAT to ") +  lua_save_parameter);
+              m_pCellCodeTextureFinal->CreateThumbnail("EXR", m_pCellCodeTexture->GetWidth(), m_pCellCodeTexture->GetHeight(), lua_save_parameter);
+
+            } else {
+
+              MODebug2->Message( moText("CellSaveProgram: trying to save program to extension format: ") +  cellcodefile.GetExtension());
+              moText FORMAT = "PNG";
+              if (cellcodefile.GetExtension()==".png") FORMAT = "PNG";
+              if (cellcodefile.GetExtension()==".jpg") FORMAT = "JPGNORMAL";
+              lua_save_parameter = cellcodefile.GetPath()+cellcodefile.GetFileName();
+
+              m_pCellCodeTextureFinal->CreateThumbnail( FORMAT, m_pCellCodeTexture->GetWidth(), m_pCellCodeTexture->GetHeight(), lua_save_parameter);
+            }
+          }
+
+        }
+  }
+}
+
 int moEffectParticlesFractal::luaCellDumpProgram(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;
 
     lua_id_cell = (MOint) lua_tonumber (state, 1);
+
     if (m_cols) {
       cell_position_j = lua_id_cell / m_cols;
       cell_position_i = lua_id_cell - cell_position_j*m_cols;
@@ -4814,9 +4927,6 @@ int moEffectParticlesFractal::luaCellDumpProgram(moLuaVirtualMachine& vm) {
     if (cellcodeArray && m_pCellCodeTextureFinal) {
 
         cell_position = cell_position_i*4*m_cellcode + cell_position_j*4*m_cellcode*m_cellcode*m_cols;
-
-        moText fname = m_pResourceManager->GetDataMan()->GetDataPath()+moSlash+"cellcode";
-        m_pCellCodeTextureFinal->CreateThumbnail("PNGA", m_pCellCodeTexture->GetWidth(), m_pCellCodeTexture->GetHeight(), fname);
 
         glBindTexture( GL_TEXTURE_2D, m_pCellCodeTextureFinal->GetGLId() );
         glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, cellcodeArray );
@@ -4953,8 +5063,8 @@ int moEffectParticlesFractal::luaCellLink(moLuaVirtualMachine& vm) {
 
     long link_code = (float) lua_tonumber (state, 1);//cell mem
     //long link_code2 = (float) lua_tonumber (state, 1);
-    MODebug2->Message( moText("CellLink: ") + IntToStr(lua_id_cell)
-                      + " link code:" + IntToStr(link_code) );
+    //MODebug2->Message( moText("CellLink: ") + IntToStr(lua_id_cell)
+    //                  + " link code:" + IntToStr(link_code) );
 
     if (cellcodeArray) {
         long cell_position_2nd = cell_position + 4*m_cellcode*m_cols;
@@ -4963,8 +5073,8 @@ int moEffectParticlesFractal::luaCellLink(moLuaVirtualMachine& vm) {
         cellcodeArray[cell_position_2nd+9] = link_code;/// -1: unlink, 0: link to father only, 1: link to father and
         ///cellcodeArray[cell_position_2nd+10] = link_code2;
 
-        m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
-        m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
+        //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }
 
     return 0;

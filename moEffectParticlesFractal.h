@@ -963,6 +963,9 @@ class moEffectParticlesFractal : public moEffect
         int luaCellEndProgram(moLuaVirtualMachine& vm);
         int luaCellDumpProgram(moLuaVirtualMachine& vm);
 
+        int luaCellLoadProgram(moLuaVirtualMachine& vm);
+        int luaCellSaveProgram(moLuaVirtualMachine& vm);
+
         ///end script functions
 
         moInlet*                  m_pParticleTime;

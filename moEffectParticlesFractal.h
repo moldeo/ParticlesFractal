@@ -320,6 +320,7 @@ enum moParticlesFractalParamIndex {
 	PARTICLES_COLOR,
 	PARTICLES_SYNC,
 	PARTICLES_PHASE,
+	PARTICLES_GUIDES,
 
 	PARTICLES_MATURITY,
 	PARTICLES_LEFT_REP_ANGLE_MIN,
@@ -965,6 +966,8 @@ class moEffectParticlesFractal : public moEffect
 
         int luaCellLoadProgram(moLuaVirtualMachine& vm);
         int luaCellSaveProgram(moLuaVirtualMachine& vm);
+
+        int luaGetMemory(moLuaVirtualMachine& vm);
 
         ///end script functions
 

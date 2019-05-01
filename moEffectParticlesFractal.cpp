@@ -359,6 +359,9 @@ moEffectParticlesFractal::Init()
     moDefineParamIndex( PARTICLES_COLOR, moText("color") );
     moDefineParamIndex( PARTICLES_SYNC, moText("syncro") );
     moDefineParamIndex( PARTICLES_PHASE, moText("phase") );
+    moDefineParamIndex( PARTICLES_GUIDES, moText("guides"));
+
+
     moDefineParamIndex( PARTICLES_PARTICLECOLOR, moText("particlecolor") );
     moDefineParamIndex( PARTICLES_FONT, moText("font") );
     moDefineParamIndex( PARTICLES_TEXT, moText("text") );
@@ -494,6 +497,7 @@ moEffectParticlesFractal::Init()
     moDefineParamIndex( PARTICLES_LIGHTX, moText("lightx") );
     moDefineParamIndex( PARTICLES_LIGHTY, moText("lighty") );
     moDefineParamIndex( PARTICLES_LIGHTZ, moText("lightz") );
+
 
     m_Physics.m_ParticleScript = moText("");
 
@@ -1193,7 +1197,7 @@ void moEffectParticlesFractal::UpdateParameters() {
 
   moGLMatrixf PosResult;
 
-  if (m_EmitterShader.Initialized() && posArray) {
+  if (m_EmitterShader.Initialized() && posArray && 1==2) {
 
     if (m_pFBO_Emitions)
       m_pFBO_Emitions->Bind();
@@ -1333,7 +1337,7 @@ void moEffectParticlesFractal::UpdateParameters() {
     }
   }
 
-  if (m_CohesionShader.Initialized() && posArray) {
+  if (m_CohesionShader.Initialized() && posArray && 1==2) {
 
     if (m_pFBO_Cohesion)
       m_pFBO_Cohesion->Bind();
@@ -1466,35 +1470,40 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
 
     if ( moIsTimerStopped() || !m_EffectState.tempo.Started() ) {
         ResetTimers();
-        //MODebug2->Message("moEffectParticlesSimple::UpdateParameters  > ResetTimers!!!");
+        m_Physics.m_ParticleScript = moText("");
+        MODebug2->Message("moEffectParticleFractal::UpdateParameters  > ResetTimers!!!");
+    } else {
+      //if script is modified... recompile
+      if ((moText)m_Physics.m_ParticleScript!=m_Config.Text( moR(PARTICLES_SCRIPT) ) ) {
+
+          MODebug2->Message(moText("ParticleFractal script recompiling"));
+          m_Physics.m_ParticleScript = m_Config.Text( moR(PARTICLES_SCRIPT) );
+          moText fullscript = m_pResourceManager->GetDataMan()->GetDataPath()+ moSlash + (moText)m_Physics.m_ParticleScript;
+
+          if ( CompileFile(fullscript) ) {
+
+              MODebug2->Message(moText("ParticleFractal script loaded ") + (moText)fullscript );
+
+              SelectScriptFunction( "Init" );
+              //AddFunctionParam( m_FramesPerSecond );
+              RunSelectedFunction();
+              ResetTimers();
+          } else MODebug2->Error(moText("ParticlesSimple couldnt compile lua script ") + (moText)fullscript );
+      }
+
+      if (moScript::IsInitialized()) {
+          if (ScriptHasFunction("RunSystem")) {
+              SelectScriptFunction("RunSystem");
+              //passing number of particles
+              AddFunctionParam( (int) ( m_rows*m_cols ) );
+              AddFunctionParam( (float) dt );
+              RunSelectedFunction(1);
+          }
+      }
+
     }
 
-    //if script is modified... recompile
-	if ((moText)m_Physics.m_ParticleScript!=m_Config.Text( moR(PARTICLES_SCRIPT2) ) ) {
 
-        m_Physics.m_ParticleScript = m_Config.Text( moR(PARTICLES_SCRIPT2) );
-        moText fullscript = m_pResourceManager->GetDataMan()->GetDataPath()+ moSlash + (moText)m_Physics.m_ParticleScript;
-
-        if ( CompileFile(fullscript) ) {
-
-            MODebug2->Message(moText("ParticlesSimple script loaded ") + (moText)fullscript );
-
-            SelectScriptFunction( "Init" );
-            //AddFunctionParam( m_FramesPerSecond );
-            RunSelectedFunction();
-            ResetTimers();
-        } else MODebug2->Error(moText("ParticlesSimple couldnt compile lua script ") + (moText)fullscript );
-	}
-
-    if (moScript::IsInitialized()) {
-        if (ScriptHasFunction("RunSystem")) {
-            SelectScriptFunction("RunSystem");
-            //passing number of particles
-            AddFunctionParam( (int) ( m_rows*m_cols ) );
-            AddFunctionParam( (float) dt );
-            RunSelectedFunction(1);
-        }
-    }
 
     drawing_features = m_Config.Int( moR(PARTICLES_DRAWINGFEATURES));
     texture_mode = m_Config.Int( moR(PARTICLES_TEXTUREMODE));
@@ -2842,7 +2851,17 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
   }
 */
   MODebug2->Message("moParticlesFractal::Init > Creating basic Emitter Shader...");
-  if (!m_EmitterShader.Initialized()) {
+
+  moText basen = pDM->GetDataPath()+moSlash + this->GetLabelName() + moSlash;
+  moText vx_fn = basen + "esVertex.glsl";
+  moText fx_fn = basen + "esFragment.glsl";
+  moText gx_fn = basen + "esGeometry.glsl";
+
+  moFile  Eve( vx_fn  );
+  moFile  Fra( fx_fn  );
+  moFile  Geo( gx_fn  );
+
+  if (!m_EmitterShader.Initialized() && Eve.Exists() && Fra.Exists() && Geo.Exists() ) {
 
     m_emitions_w = min(2048,p_cols*8);
     m_emitions_h = min(2048,p_rows*8);
@@ -2888,10 +2907,6 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
 
 
     MODebug2->Message("moParticlesFractal::InitParticlesFractal > Creating basic Emitter Shader...");
-    moText basen = pDM->GetDataPath()+moSlash + this->GetLabelName() + moSlash;
-    moText vx_fn = basen + "esVertex.glsl";
-    moText fx_fn = basen + "esFragment.glsl";
-    moText gx_fn = basen + "esGeometry.glsl";
     MODebug2->Message("loading from:" + vx_fn+ " " + fx_fn+ " " + gx_fn);
 
     m_EmitterShader.LoadShader(vx_fn,fx_fn,gx_fn);
@@ -2928,7 +2943,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
 
 
   MODebug2->Message("moParticlesFractal::Init > Creating basic Cohesion Shader...");
-  if (!m_CohesionShader.Initialized()) {
+  if (!m_CohesionShader.Initialized() && 1==2) {
     m_cohesion_w = p_cols;
     m_cohesion_h = p_rows;
 
@@ -4048,7 +4063,8 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
 	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
 	glPopMatrix();										// Restore The Old Projection Matrix
 
-  if (m_Config.Int("guides")>0) {
+  //if (m_Config.Int("guides")>0) {
+  if (m_Config.Int(moR(PARTICLES_GUIDES))>0) {
 
       if (m_pCellCodeTextureFinal) DrawTexture( m_pCellCodeTextureFinal, -0.45, 0.2, 0.0, 0.1, 0.1  );
       if (m_pCellMemoryTextureFinal) DrawTexture( m_pCellMemoryTextureFinal, -0.45, 0.1, 0.0, 0.1, 0.1  );
@@ -4062,11 +4078,11 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
 
       if (m_pNormalTextureFinal) DrawTexture( m_pNormalTextureFinal, 0.35, 0.2, 0.0, 0.1, 0.1  );
 
-      if (m_emitions_array) {
+      if (m_emitions_array && 1==2) {
         //DrawTexture( m_pEmitionsTexture, 0.0, 0.0, 0.0, 0.2  );
         DrawEmitions( 0.35, 0.1, 0.0, 0.001, 0.0, 0.0, 0.2, 0.2 );
       }
-      if (m_cohesion_array) {
+      if (m_cohesion_array && 1==2) {
         //DrawTexture( m_pEmitionsTexture, 0.0, 0.0, 0.0, 0.2  );
         DrawCohesion( 0.35, -0.1, 0.0, 0.001, 0.0, 0.0, 0.2, 0.2 );
       }
@@ -4132,11 +4148,13 @@ MOboolean moEffectParticlesFractal::Finish()
 
 
 void moEffectParticlesFractal::Interaction( moIODeviceManager *IODeviceManager ) {
+
+  moEffect::Interaction( IODeviceManager );
   /*
 	moDeviceCode *temp;
 	MOint did,cid,state,valor;
 
-	moEffect::Interaction( IODeviceManager );
+
 
 	if (devicecode!=NULL)
 	for(int i=0; i<ncodes; i++) {
@@ -4357,6 +4375,7 @@ void moEffectParticlesFractal::RegisterFunctions()
     RegisterFunction("CellLoadProgram");//44
     RegisterFunction("CellSaveProgram");//45
 
+    RegisterFunction("GetMemory");//46
 /*
     // 05: yellow 01
     RegisterFunction("cellGrow");//30 scale
@@ -4561,6 +4580,9 @@ switch (iFunctionNumber - m_iMethodBase)
             ResetScriptCalling();
             return luaCellAcc(vm);
         */
+        case 46:
+            ResetScriptCalling();
+            return luaGetMemory(vm);
 
         default:
             NextScriptCalling();
@@ -4864,8 +4886,9 @@ int moEffectParticlesFractal::luaCellSaveProgram(moLuaVirtualMachine& vm) {
   moText lua_save_parameter = (char*) lua_tostring(state, 1);
   int lua_save_parameter_force = (int) lua_tonumber(state, 2);
 
-  MODebug2->Message( moText("CellSaveProgram: ") + lua_save_parameter + moText(" force rewrite:") + IntToStr(lua_save_parameter_force) );
-
+  if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+    MODebug2->Message( moText("CellSaveProgram: ") + lua_save_parameter + moText(" force rewrite:") + IntToStr(lua_save_parameter_force) );
+  }
   if (cellcodeArray) {
         if (lua_save_parameter=="") {
          lua_save_parameter  = m_pResourceManager->GetDataMan()->GetDataPath()+moSlash+GetLabelName()+"_cellcode";
@@ -4873,8 +4896,9 @@ int moEffectParticlesFractal::luaCellSaveProgram(moLuaVirtualMachine& vm) {
         if (lua_save_parameter!="") {
 
           lua_save_parameter  = m_pResourceManager->GetDataMan()->GetDataPath()+moSlash+lua_save_parameter;
-
-          MODebug2->Message( moText("CellSaveProgram: trying to save to ") +  lua_save_parameter);
+          if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+            MODebug2->Message( moText("CellSaveProgram: trying to save to ") +  lua_save_parameter);
+          }
 
           moFile cellcodefile( lua_save_parameter);
 
@@ -4920,10 +4944,11 @@ int moEffectParticlesFractal::luaCellDumpProgram(moLuaVirtualMachine& vm) {
       cell_position_j = lua_id_cell / m_cols;
       cell_position_i = lua_id_cell - cell_position_j*m_cols;
     }
-    MODebug2->Message( moText("CellDumpProgram: ") + IntToStr(lua_id_cell)
-    + "(" + IntToStr(cell_position_i)
-    + "," + IntToStr(cell_position_j) + ")" );
-
+    if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+      MODebug2->Message( moText("CellDumpProgram: ") + IntToStr(lua_id_cell)
+                        + "(" + IntToStr(cell_position_i)
+                        + "," + IntToStr(cell_position_j) + ")" );
+    }
     if (cellcodeArray && m_pCellCodeTextureFinal) {
 
         cell_position = cell_position_i*4*m_cellcode + cell_position_j*4*m_cellcode*m_cellcode*m_cols;
@@ -4933,6 +4958,7 @@ int moEffectParticlesFractal::luaCellDumpProgram(moLuaVirtualMachine& vm) {
 
         moText fullcode = "";
         int cchange = 0;
+
         moText linechange = "";
 
         for(int linec = 0; linec<m_cellcode; linec++) {
@@ -4943,7 +4969,6 @@ int moEffectParticlesFractal::luaCellDumpProgram(moLuaVirtualMachine& vm) {
 
             for(int cc = cpos; cc<(cpos+4*m_cellcode); cc++) {
                 //if ( cchange == m_cellcode*m_cellcode*4 ) { cellchange = "\n\n"; cchange=0; }
-
                 fullcode += celdatab + FloatToStr( cellcodeArray[cc], 2,4 );
                 celdatab = "  ";
 
@@ -5012,10 +5037,12 @@ int moEffectParticlesFractal::luaDumpMemory(moLuaVirtualMachine& vm) {
       cell_position_j = lua_id_cell / m_cols;
       cell_position_i = lua_id_cell - cell_position_j*m_cols;
     }
-    MODebug2->Message( moText("DumpMemory: ") + IntToStr(lua_id_cell)
-    + " (" + IntToStr(cell_position_i)
-    + "," + IntToStr(cell_position_j) + ")" );
-
+    if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+      MODebug2->Message( moText("DumpMemory: ") + IntToStr(lua_id_cell)
+                          + " (" + IntToStr(cell_position_i)
+                          + "," + IntToStr(cell_position_j) + ")" );
+    }
+    int cn = 0;
     if (cellmemoryArray && m_pCellMemoryTextureFinal) {
 
         cell_position = cell_position_i*4*m_cellmem + cell_position_j*4*m_cellmem*(m_cellmem*m_cols);
@@ -5049,12 +5076,72 @@ int moEffectParticlesFractal::luaDumpMemory(moLuaVirtualMachine& vm) {
             }
             linechange = "\n";
         }
-        MODebug2->Message(fullcode);
+        if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+          MODebug2->Message(fullcode);
+        }
     } else {
+      if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
         MODebug2->Warning("CellMemory array not ready!");
+      }
     }
 
     return 0;
+}
+
+int moEffectParticlesFractal::luaGetMemory(moLuaVirtualMachine& vm) {
+    lua_State *state = (lua_State *) vm;
+
+    lua_id_cell = (MOint) lua_tonumber (state, 1);
+    int lua_cell_mem_start = (MOint) lua_tonumber (state, 2);
+    int lua_cell_mem_end = (MOint) lua_tonumber (state, 3);
+    if (m_cols) {
+      cell_position_j = lua_id_cell / m_cols;
+      cell_position_i = lua_id_cell - cell_position_j*m_cols;
+    }
+    if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+      MODebug2->Message( moText("GetMemory: ") + IntToStr(lua_id_cell)
+                        + " (" + IntToStr(cell_position_i)
+                        + "," + IntToStr(cell_position_j) + ")" );
+    }
+    int cn = 0;
+    if (cellmemoryArray && m_pCellMemoryTextureFinal) {
+        cell_position = cell_position_i*4*m_cellmem + cell_position_j*4*m_cellmem*(m_cellmem*m_cols);
+
+        glBindTexture( GL_TEXTURE_2D, m_pCellMemoryTextureFinal->GetGLId() );
+        glGetTexImage( GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, cellmemoryArray );
+
+        moText fullcode = "";
+        int cchange = 0;
+        moText linechange = "";
+
+        for(int linec = lua_cell_mem_start; linec<=lua_cell_mem_end /*m_cellmem*/; linec++) {
+
+            fullcode += linechange;
+            long cpos = cell_position+linec*4*m_cellmem*m_cols;
+            moText celdatab = "["+IntToStr(linec*4*m_cellmem,2)+"] ";
+
+
+            for(int cc = cpos; cc<(cpos+4*m_cellmem); cc++) {
+                //if ( cchange == m_cellcode*m_cellmem*4 ) { cellchange = "\n\n"; cchange=0; }
+                lua_pushnumber(state, (lua_Number) (float)cellmemoryArray[cc] );
+                cn++;
+
+                fullcode += celdatab + FloatToStr( cellmemoryArray[cc], 2, 4 );
+                celdatab = "  ";
+
+                if ( ((cc+1) % 4) == 0) {
+
+                  celdatab = " | ["+IntToStr( linec*4*m_cellmem + (cc-cpos)+1,2)+"] ";
+                }
+            }
+            linechange = "\n";
+        }
+        if (m_Config.Int(moR(PARTICLES_GUIDES))>1) {
+          MODebug2->Message(cn);
+          MODebug2->Message(fullcode);
+        }
+    }
+    return cn;
 }
 
 

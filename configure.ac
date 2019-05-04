@@ -7,9 +7,9 @@
 # make
 # make install
 #
-AC_INIT([ParticlesFractal], [0.1], [info@moldeointeractive.com.ar], [particlesfractal])
+AC_INIT([ParticlesFractal], [1.1.0.4], [info@moldeointeractive.com.ar], [moldeoplugins-particlesfractal])
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([foreign])
 AM_MAINTAINER_MODE
 AC_CONFIG_MACRO_DIR([m4])
 AM_CONFIG_HEADER(config.h)
@@ -44,5 +44,3 @@ AM_CONDITIONAL(DEBUG, test x"$debug" = x"true")
 echo "DEBUG: $debug"
 
 AC_OUTPUT(Makefile)
-
-

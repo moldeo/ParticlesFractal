@@ -51,7 +51,7 @@
 			<Add option="-DUNICODE" />
 			<Add option="-DGLEW_STATIC" />
 			<Add directory="./" />
-			<Add directory="../../../include" />
+			<Add directory="../moldeoinstaller/include" />
 			<Add directory="$(externlibs)/glew-1.9.0/include" />
 			<Add directory="$(externlibs)/opengl/include" />
 			<Add directory="$(externlibs)/openal/include" />
@@ -65,7 +65,7 @@
 			<Add directory="$(externlibs)/cg/lib" />
 			<Add directory="$(externlibs)/openal/libs/win32" />
 			<Add directory="$(externlibs)/opengl/lib" />
-			<Add directory="../../../lib/win" />
+			<Add directory="../moldeoinstaller/lib/win" />
 		</Linker>
 		<Unit filename="moEffectParticlesFractal.cpp" />
 		<Unit filename="moEffectParticlesFractal.h" />

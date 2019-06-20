@@ -1197,7 +1197,7 @@ void moEffectParticlesFractal::UpdateParameters() {
 
   moGLMatrixf PosResult;
 
-  if (m_EmitterShader.Initialized() && posArray && 1==2) {
+  if (m_EmitterShader.Initialized() && posArray && 1==1) {
 
     if (m_pFBO_Emitions)
       m_pFBO_Emitions->Bind();
@@ -1470,6 +1470,28 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
 
     if ( moIsTimerStopped() || !m_EffectState.tempo.Started() ) {
         ResetTimers();
+        if (cellcodeArray) {
+          long numCellCodeBox = m_rows * m_cols * m_cellcode * m_cellcode;
+          for(long c=0; c<numCellCodeBox; c++) {
+            //cellcodeArray[c*4+3] = 1.0;
+            cellcodeArray[c*4] = 0.0;
+            cellcodeArray[c*4+1] = 0.0;
+            cellcodeArray[c*4+2] = 0.0;
+            cellcodeArray[c*4+3] = 0.0;
+          }
+
+
+         }
+        if (cellmemoryArray) {
+          long numCellCodeBox = m_rows * m_cols * m_cellmem * m_cellmem;
+          for(long c=0; c<numCellCodeBox; c++) {
+            //cellcodeArray[c*4+3] = 1.0;
+            cellmemoryArray[c*4] = 0.0;
+            cellmemoryArray[c*4+1] = 0.0;
+            cellmemoryArray[c*4+2] = 0.0;
+            cellmemoryArray[c*4+3] = 0.0;
+          }
+        }
         m_Physics.m_ParticleScript = moText("");
         MODebug2->Message("moEffectParticleFractal::UpdateParameters  > ResetTimers!!!");
     } else {
@@ -2311,6 +2333,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + moText(" ")+m_pCellCodeTexture->GetName()
                       + moText(" ")+m_pCellMemoryTexture->GetName()
                       + moText(" ")+m_pScaleTexture->GetName()
+
                       + moText(" ")+this->GetLabelName()+moText("/Birth.cfg " )
                       + m_pStateTextureSwap->GetName() );
     MODebug2->Message(     moText("SHADER: BIRTH SWAP   ======================"));
@@ -2330,6 +2353,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + moText(" ")+m_pCellCodeTextureSwap->GetName()
                       + moText(" ")+m_pCellMemoryTextureSwap->GetName()
                       + moText(" ")+m_pScaleTextureSwap->GetName()
+
                       + moText(" ")+this->GetLabelName()+moText("/Birth.cfg " )
                       + m_pStateTexture->GetName() );
     MODebug2->Message(     moText("SHADER: BIRTH        ======================"));
@@ -2374,15 +2398,16 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
       && m_pColorTextureSwap && m_pColorTexture && m_pStateTextureSwap ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add( m_pStateTextureSwap->GetName()
-                      + " " + m_pColorTexture->GetName()
+                      + " " + m_pColorTextureSwap->GetName()
                       + " " + m_MediumTextureLoadedName/*Afecta el color de la particula: (r,g,b) || (h,s,v)*/
                       + " " + m_AltitudeTextureLoadedName/*Afecta el brillo de la particula: (r*0.15+g*0.7+b*0.2) */
                       + " " + m_VariabilityTextureLoadedName/*Afecta la variación del color: entre que colores oscila*/
                       + " " + m_ConfidenceTextureLoadedName/*Afecta la confianza del dato: su opacidad: alpha channel (rgb,A)*/
-                      + moText(" ")+m_pCellCodeTexture->GetName()
-                      + moText(" ")+m_pCellMemoryTexture->GetName()
+                      + moText(" ")+m_pCellCodeTextureSwap->GetName()
+                      + moText(" ")+m_pCellMemoryTextureSwap->GetName()
+
                       + moText(" ")+this->GetLabelName()+moText("/Color.cfg " )
-                      + m_pColorTextureSwap->GetName() );
+                      + m_pColorTexture->GetName() );
     MODebug2->Message(     moText("SHADER: COLOR SWAP ======================"));
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
     if (idx>0) {
@@ -2397,15 +2422,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
       && m_pColorTextureSwap && m_pColorTexture && m_pStateTexture ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add( m_pStateTexture->GetName()
-                      + " " + m_pColorTextureSwap->GetName()
+                      + " " + m_pColorTexture->GetName()
                        + " " + m_MediumTextureLoadedName/**/
                       + " " + m_AltitudeTextureLoadedName/**/
                       + " " + m_VariabilityTextureLoadedName/**/
                       + " " + m_ConfidenceTextureLoadedName/**/
-                      + moText(" ")+m_pCellCodeTextureSwap->GetName()
-                      + moText(" ")+m_pCellMemoryTextureSwap->GetName()
+                      + moText(" ")+m_pCellCodeTexture->GetName()
+                      + moText(" ")+m_pCellMemoryTexture->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Color.cfg " )
-                      + m_pColorTexture->GetName() );
+                      + m_pColorTextureSwap->GetName() );
     MODebug2->Message(     moText("SHADER: COLOR ==========================="));
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
     if (idx>0) {
@@ -2499,15 +2524,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     moTextArray copy_filter_0;
     copy_filter_0.Add(
                       //+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTextureSwap->GetName()
-                      + " " + m_pPositionTextureSwap->GetName()
+                      m_pStateTexture->GetName()
+                      + " " + m_pPositionTexture->GetName()
                       + " " + m_pScaleTexture->GetName()
 
                       + " " + m_MediumTextureLoadedName/**/
                       + " " + m_AltitudeTextureLoadedName/**/
 
-                      + " " + m_pCellCodeTextureSwap->GetName()
-                      + " " + m_pCellMemoryTextureSwap->GetName()
+                      + " " + m_pCellCodeTexture->GetName()
+                      + " " + m_pCellMemoryTexture->GetName()
 
 //                      + " " + m_VariabilityTextureLoadedName
 //                      + " " + m_ConfidenceTextureLoadedName
@@ -2527,15 +2552,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
   if (1==1 && !m_pTFilter_ScaleTexture && m_pScaleTexture && m_pScaleTextureSwap ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTexture->GetName()
-                      + " " + m_pPositionTexture->GetName()
+                      m_pStateTextureSwap->GetName()
+                      + " " + m_pPositionTextureSwap->GetName()
                       + " " + m_pScaleTextureSwap->GetName()
 
                       + " " + m_MediumTextureLoadedName
                       + " " + m_AltitudeTextureLoadedName
 
-                      + " " + m_pCellCodeTexture->GetName()
-                      + " " + m_pCellMemoryTexture->GetName()
+                      + " " + m_pCellCodeTextureSwap->GetName()
+                      + " " + m_pCellMemoryTextureSwap->GetName()
 
 //                      + " " + m_VariabilityTextureLoadedName
 //                      + " " + m_ConfidenceTextureLoadedName
@@ -2583,9 +2608,9 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     moTextArray copy_filter_0;
     copy_filter_0.Add(
                       //+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTextureSwap->GetName()
-                      + " " + m_pVelocityTextureSwap->GetName()
-                      + " " + m_pPositionTextureSwap->GetName()
+                      m_pStateTexture->GetName()
+                      + " " + m_pVelocityTexture->GetName()
+                      + " " + m_pPositionTexture->GetName()
                       + " " + m_pOrientationTexture->GetName()
 
 /*                      + " " + m_MediumTextureLoadedName
@@ -2593,9 +2618,9 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_pCellCodeTextureSwap->GetName()
                       + " " + m_VariabilityTextureLoadedName
                       + " " + m_ConfidenceTextureLoadedName*/
-                      + " "+m_pCellCodeTextureSwap->GetName()
-                      + " " + m_pCellMemoryTextureSwap->GetName()
-                      + " " + m_pNormalTextureSwap->GetName()
+                      + " "+m_pCellCodeTexture->GetName()
+                      + " " + m_pCellMemoryTexture->GetName()
+                      + " " + m_pNormalTexture->GetName()
 
                       + moText(" ")+this->GetLabelName()+moText("/Orientation.cfg" )
                       + " " + m_pOrientationTextureSwap->GetName() );
@@ -2610,17 +2635,17 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
   if ( !m_pTFilter_OrientationTexture && m_pOrientationTexture && m_pOrientationTextureSwap ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTexture->GetName()
-                      + " " + m_pVelocityTexture->GetName()
-                      + " " + m_pPositionTexture->GetName()
+                      m_pStateTextureSwap->GetName()
+                      + " " + m_pVelocityTextureSwap->GetName()
+                      + " " + m_pPositionTextureSwap->GetName()
                       + " " + m_pOrientationTextureSwap->GetName()
 
 //                      + " " + m_MediumTextureLoadedName
 //                      + " " + m_AltitudeTextureLoadedName
 
-                      + " " + m_pCellCodeTexture->GetName()
-                      + " " + m_pCellMemoryTexture->GetName()
-                      + " " + m_pNormalTexture->GetName()
+                      + " " + m_pCellCodeTextureSwap->GetName()
+                      + " " + m_pCellMemoryTextureSwap->GetName()
+                      + " " + m_pNormalTextureSwap->GetName()
 
 /*                      + " " + m_VariabilityTextureLoadedName
                       + " " + m_ConfidenceTextureLoadedName*/
@@ -2644,7 +2669,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pStateTextureSwap->GetName()
 //                      + " " + m_pColorTextureSwap->GetName()
 + " " + m_pCellCodeTextureSwap->GetName()
-                      + " " + m_pVelocityTexture->GetName()
+                      + " " + m_pVelocityTextureSwap->GetName()
                       + " " + m_pPositionTextureSwap->GetName()
 ///                      + " " + m_pCellCodeTexture->GetName()
 
@@ -2662,7 +2687,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
 //+ " " + m_pCellCodeTextureSwap->GetName()
                       //+ moText(" ")+m_pCellCodeTexture->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Velocity.cfg " )
-                      + m_pVelocityTextureSwap->GetName() );
+                      + m_pVelocityTexture->GetName() );
 
     MODebug2->Message(     moText("SHADER: VELOCITY SWAP ===================="));
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
@@ -2680,7 +2705,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     copy_filter_0.Add( m_pStateTexture->GetName()
 ///                      + " " + m_pColorTexture->GetName()
 + " " + m_pCellCodeTexture->GetName()
-                      + " " +  m_pVelocityTextureSwap->GetName()
+                      + " " +  m_pVelocityTexture->GetName()
                       + " " + m_pPositionTexture->GetName()
 
 ///                      + " " + m_pCellCodeTextureSwap->GetName()
@@ -2691,7 +2716,7 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
                       + " " + m_ConfidenceTextureLoadedName
 //+ " " + m_pCellCodeTexture->GetName()
                       + moText(" ")+this->GetLabelName()+moText("/Velocity.cfg " )
-                      + m_pVelocityTexture->GetName() );
+                      + m_pVelocityTextureSwap->GetName() );
     MODebug2->Message(     moText("SHADER: VELOCITY =========================="));
     int idx = pTextureFilterIndex->LoadFilters( &copy_filter_0 );
     if (idx>0) {
@@ -2716,8 +2741,8 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     moTextArray copy_filter_0;
     copy_filter_0.Add(
                       //+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTextureSwap->GetName()
-                      + " " + m_pVelocityTextureSwap->GetName()
+                      m_pStateTexture->GetName()
+                      + " " + m_pVelocityTexture->GetName()
                       + " " + m_pPositionTexture->GetName()
 ///+ " " + m_pColorTexture->GetName()
 + " " + m_pCellCodeTexture->GetName()
@@ -2749,8 +2774,8 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
   if ( !m_pTFilter_PositionTexture && m_pPositionTexture && m_pPositionTextureSwap ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTexture->GetName()
-                      + " " + m_pVelocityTexture->GetName()
+                      m_pStateTextureSwap->GetName()
+                      + " " + m_pVelocityTextureSwap->GetName()
                       + " " + m_pPositionTextureSwap->GetName()
 //+ " " + m_pColorTextureSwap->GetName()
 + " " + m_pCellCodeTextureSwap->GetName()
@@ -2788,15 +2813,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
     moTextArray copy_filter_0;
     copy_filter_0.Add(
                       //+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTextureSwap->GetName()
-                      + " " + m_pVelocityTextureSwap->GetName()
+                      m_pStateTexture->GetName()
+                      + " " + m_pVelocityTexture->GetName()
                       + " " + m_pPositionTexture->GetName()
                       + " " + m_pNormalTexture->GetName()
                       + " " + m_pScaleTexture->GetName()
 ///+ " " + m_pColorTexture->GetName()
 + " " + m_pCellCodeTexture->GetName()
 + " " + m_pCellMemoryTexture->GetName()
-                      + " " + m_pOrientationTextureSwap->GetName()
+                      + " " + m_pOrientationTexture->GetName()
                       /// el color se puede interpretar para zonificar las particulas: rojo a la izquierda de la pantalla, azul a la derecha*/
 //                      + " " + m_AltitudeTextureLoadedName
                       /// la altidud a su vez puede servir para dar una profundidad al valor...
@@ -2821,15 +2846,15 @@ void moEffectParticlesFractal::InitParticlesFractal( int p_cols, int p_rows, boo
   if ( !m_pTFilter_NormalTexture && m_pNormalTexture && m_pNormalTextureSwap ) {
     moTextArray copy_filter_0;
     copy_filter_0.Add(//+  moText(" shaders/Birth.cfg res:64x64 " )
-                      m_pStateTexture->GetName()
-                      + " " + m_pVelocityTexture->GetName()
+                      m_pStateTextureSwap->GetName()
+                      + " " + m_pVelocityTextureSwap->GetName()
                       + " " + m_pPositionTextureSwap->GetName()
                       + " " + m_pNormalTextureSwap->GetName()
                       + " " + m_pScaleTextureSwap->GetName()
 //+ " " + m_pColorTextureSwap->GetName()
 + " " + m_pCellCodeTextureSwap->GetName()
 + " " + m_pCellMemoryTextureSwap->GetName()
-+ " " + m_pOrientationTexture->GetName()
++ " " + m_pOrientationTextureSwap->GetName()
 //                      + " " + m_AltitudeTextureLoadedName
 //                      + " " + m_VariabilityTextureLoadedName
 //                      + " " + m_ConfidenceTextureLoadedName
@@ -3709,7 +3734,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     MODebug2->Message("Time:" + IntToStr(m_EffectState.tempo.Duration()) );
   }
   if (m_RenderShader.Initialized()
-  && (m_EffectState.tempo.Duration()>ttime || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE  ) ) {
+  && (m_EffectState.tempo.Duration()>ttime/* || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE*/  ) ) {
 
     m_RenderShader.StartShader();
     glLineWidth(2.0);
@@ -4066,6 +4091,9 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
   //if (m_Config.Int("guides")>0) {
   if (m_Config.Int(moR(PARTICLES_GUIDES))>0) {
 
+      if (m_pResourceManager && m_pResourceManager->GetGuiMan()) {
+        m_pResourceManager->GetGuiMan()->DisplayInfoWindow( 0 , 0, 200, 100, "CellCode" );
+      }
       if (m_pCellCodeTextureFinal) DrawTexture( m_pCellCodeTextureFinal, -0.45, 0.2, 0.0, 0.1, 0.1  );
       if (m_pCellMemoryTextureFinal) DrawTexture( m_pCellMemoryTextureFinal, -0.45, 0.1, 0.0, 0.1, 0.1  );
       if (m_pStateTextureFinal) DrawTexture( m_pStateTextureFinal, -0.45, -0.1, 0.0, 0.1, 0.1  );
@@ -4078,13 +4106,13 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
 
       if (m_pNormalTextureFinal) DrawTexture( m_pNormalTextureFinal, 0.35, 0.2, 0.0, 0.1, 0.1  );
 
-      if (m_emitions_array && 1==2) {
+      if (m_emitions_array && 1==1) {
         //DrawTexture( m_pEmitionsTexture, 0.0, 0.0, 0.0, 0.2  );
-        DrawEmitions( 0.35, 0.1, 0.0, 0.001, 0.0, 0.0, 0.2, 0.2 );
+        DrawEmitions( 0.35, 0.1, 0.0, 0.001, 0.0, 0.0, 0.1, 0.1 );
       }
       if (m_cohesion_array && 1==2) {
         //DrawTexture( m_pEmitionsTexture, 0.0, 0.0, 0.0, 0.2  );
-        DrawCohesion( 0.35, -0.1, 0.0, 0.001, 0.0, 0.0, 0.2, 0.2 );
+        DrawCohesion( 0.35, -0.1, 0.0, 0.001, 0.0, 0.0, 0.1, 0.1 );
       }
   }
 

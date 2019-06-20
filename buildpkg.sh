@@ -1,5 +1,4 @@
 #!/bin/sh
-
 distro=$1
 
 DIE=0

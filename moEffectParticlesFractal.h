@@ -61,13 +61,83 @@
 #define MO_PARTICLES_SCALE_X 2
 #define MO_PARTICLES_SCALE_Y 3
 
+#define COSPI6 0.866025404
+
+/// Reference to Cell Code language
+/**
+  https://docs.google.com/spreadsheets/d/1DvcC5bnDPubQiTJFNuCGK4MrtGrVqnXdf4kV5KaEt0U/edit#gid=0
+*/
+
+
+///Emitter Geometry Mode
+/**
+* \if spanish
+* <b>"geometry_mode"</b>: <em>Tipo de Geometría</em>
+* Parámetro del efecto @ref moParticlesFractal
+* El tipo de geometría es la configuración geométrica de la partícula en relacion a su espacio, y a las otras partículas
+*
+* \else
+* <b>"geometry_mode"</b>: <em>Geometry (Shader) Mode</em>
+* Parámetro del efecto @ref moParticlesFractal
+* The geometry mode is the geometric configuration of each particle, how each particle will be drawn. The shape depends on
+* specific parameters, emitter type, space, medium and the others particles.
+* \endif
+*/
+
+enum moParticlesFractalGeometryMode {
+
+/// 0: \if spanish Points  \else Puntos  \endif
+PARTICLES_GEOMETRY_MODE_POINTS = 0,
+
+/// 1: \if spanish Lines  \else Lines  \endif
+PARTICLES_GEOMETRY_MODE_LINES = 1,
+
+/// 2: \if spanish Triangles  \else Triangles  \endif
+PARTICLES_GEOMETRY_MODE_TRIANGLES = 2,
+
+/// 3: \if spanish Quads  \else Quads  \endif
+PARTICLES_GEOMETRY_MODE_QUADS = 3,
+
+/// 4: \if spanish Pluma  \else Feather  \endif
+PARTICLES_GEOMETRY_MODE_FEATHER = 4,
+
+/// 5: \if spanish Tetrahedro  \else Tetrahedra  \endif
+PARTICLES_GEOMETRY_MODE_TETRA = 5,
+
+/// 6: \if spanish Arbol  \else Tree  \endif
+PARTICLES_GEOMETRY_MODE_TREE  = 6,
+
+/// 7: \if spanish Cono   \else Cone  \endif
+PARTICLES_GEOMETRY_MODE_CONE  = 7,
+
+/// 8: \if spanish Célula Voronoi  \else Voronoi Cell  \endif
+PARTICLES_GEOMETRY_MODE_VORONOI  = 8,
+
+/// 9: \if spanish Instancia   \else Instance  \endif
+PARTICLES_GEOMETRY_MODE_INSTANCE  = 9
+} ;
+
+static const char *moParticlesFractalGeometryModeStr[] = {
+"Points",
+"Lines",
+"Triangles",
+"Quads",
+"Feather",
+"Tetra",
+"Tree",
+"Cone",
+"Voronoi",
+"Instance",
+NULL
+};
+
 
 
 ///Emitter Type
 /**
 * \if spanish
 * <b>"emittertype"</b>: <em>Tipo de emisor</em>
-* Parámetro del efecto @ref moParticlesSimple
+* Parámetro del efecto @ref moParticlesFractal
 * El tipo de emisor es la configuración geométrica del espacio dónde nacen las partículas. Algo así como la incubadora de las partículas.
 *
 * \else
@@ -100,7 +170,9 @@ enum moParticlesSimpleEmitterType {
   /// 7: \if spanish Espiral ( forma de espiral, "width" ángulos que forman "height" ciclos ) \else Emitter is a spiral \endif
   PARTICLES_EMITTERTYPE_SPIRAL = 7,
   /// 8: \if spanish Círculo ( una ronda de "width"X"height" partículas  ) \else emitter is a circle \endif
-  PARTICLES_EMITTERTYPE_CIRCLE = 8
+  PARTICLES_EMITTERTYPE_CIRCLE = 8,
+  /// 9: \if spanish Crecimiento ramificado \else Tree growing cells \endif
+  PARTICLES_EMITTERTYPE_TREE = 9
 };
 
 ///Folder Shot Type
@@ -248,6 +320,7 @@ enum moParticlesFractalParamIndex {
 	PARTICLES_COLOR,
 	PARTICLES_SYNC,
 	PARTICLES_PHASE,
+	PARTICLES_GUIDES,
 
 	PARTICLES_MATURITY,
 	PARTICLES_LEFT_REP_ANGLE_MIN,
@@ -362,13 +435,39 @@ enum moParticlesFractalParamIndex {
 	PARTICLES_UPVIEWY,
 	PARTICLES_UPVIEWZ,
 	PARTICLES_RANDOMCOLORFUNCTION,
-	PARTICLES_SEPARATION
+	PARTICLES_SEPARATION,
+	PARTICLES_TEXTURE_OPACITY,
+	PARTICLES_TEXTURE_OFF_X,
+	PARTICLES_TEXTURE_OFF_Y,
+	PARTICLES_TEXTURE_SCALE_X,
+	PARTICLES_TEXTURE_SCALE_Y,
+	PARTICLES_TEXTURE_ROTATION,
+
+	PARTICLES_TEXTURE_2,
+	PARTICLES_TEXTURE_2_MODE,
+	PARTICLES_TEXTURE_2_OPACITY,
+	PARTICLES_TEXTURE_2_OFF_X,
+	PARTICLES_TEXTURE_2_OFF_Y,
+	PARTICLES_TEXTURE_2_SCALE_X,
+	PARTICLES_TEXTURE_2_SCALE_Y,
+	PARTICLES_TEXTURE_2_ROTATION,
+
+	PARTICLES_DIFFMAX,
+
+	PARTICLES_GEOMETRY_MODE,
+	PARTICLES_GEOMETRY_SHADER_OFF,
+	PARTICLES_FEATHER_SEGMENTS,
+	PARTICLES_FEATHER_LENGTH,
+	PARTICLES_FEATHER_HEAD,
+	PARTICLES_FEATHER_DYNAMIC,
 	/*
   PARTICLES_ORDERING_MODE,
+  */
   PARTICLES_LIGHTMODE,
   PARTICLES_LIGHTX,
   PARTICLES_LIGHTY,
-  PARTICLES_LIGHTZ,
+  PARTICLES_LIGHTZ
+  /*
   PARTICLES_ORDERING_MODE*/
 };
 
@@ -624,9 +723,9 @@ class moParticlesFractalPhysics : public moAbstract {
     moVector3f      m_TargetViewVector;
     moVector3f      m_UpViewVector;
 
-  /*
+
     moVector3f      m_SourceLightVector;
-    moParticlesSimpleLightMode m_SourceLighMode;*/
+    moParticlesSimpleLightMode m_SourceLighMode;
 
     double          m_RandomVelocity;
     moVector3f      m_VelocityVector;
@@ -670,22 +769,8 @@ moDeclareDynamicArray( moParticlesFractal*, moParticlesFractalArray );
 typedef std::map< double, moParticlesFractal* > TMapDepthToParticleSimple;
 
 
-class moTextureFilterVelocity : public moTextureFilter {
 
-  public:
-    moTextureFilterVelocity();
-    virtual ~moTextureFilterVelocity();
-
-    virtual MOboolean Init(moGLManager* p_glman, moRenderManager* p_renderman, moTextureArray &p_src_tex, moTextureArray &p_dest_tex, moShader *p_shader, moTextFilterParam *p_params = NULL);
-
-    virtual void Apply( moMoldeoObject *p_src_mob = NULL, moTempo* p_tempo = NULL, MOfloat p_fade = 1.0, moTextFilterParam *p_params = NULL );
-    virtual void SetupShader(MOint w, MOint h, moTempo *p_tempo, MOfloat p_fade, moTextFilterParam *p_params, moMoldeoObject* p_src_object = NULL);
-
-    GLint m_gravity;
-};
-
-
-/// Clase Particle Simple
+/// Clase Particle Fractal
 /**
  *
  *
@@ -744,6 +829,11 @@ class moEffectParticlesFractal : public moEffect
         unsigned int    m_nVBOTexCoords;                    // Texture Coordinate VBO Name
 
         bool g_fVBOSupported;
+
+        void DrawEmitions( float x, float y, float z, float dx, float dy, float dz, float sx, float sy );
+        void DrawCohesion( float x, float y, float z, float dx, float dy, float dz, float sx, float sy );
+        void DrawTexture( moTexture* p_texture, float x, float y, float z, float sx, float sy );
+
     private:
 
         ///Actualizar el dt para iteracion de particulas
@@ -751,6 +841,7 @@ class moEffectParticlesFractal : public moEffect
 
         ///Actualizar los parametros de configuración
         void UpdateParameters();
+        void UpdateRenderShader();
 
         ///Resetear el temporizador
         void ResetTimers();
@@ -808,6 +899,7 @@ class moEffectParticlesFractal : public moEffect
 
         ///Dibuja la particula simple
         void DrawParticlesFractal( moTempo* tempogral, moEffectState* parentstate );
+        void DrawParticlesFractalVBO( moTempo* tempogral, moEffectState* parentstate );
         void DrawTracker();
 
         /// Funciones para la escritura de scripts específicos de particulas
@@ -848,6 +940,8 @@ class moEffectParticlesFractal : public moEffect
 
         int luaCellAge(moLuaVirtualMachine& vm);
         int luaCellDuplicate(moLuaVirtualMachine& vm);
+        int luaCellElongate(moLuaVirtualMachine& vm);
+        int luaCellBranch(moLuaVirtualMachine& vm);
         int luaCellMutate(moLuaVirtualMachine& vm);
         int luaCellCrossover(moLuaVirtualMachine& vm);
         int luaCellDie(moLuaVirtualMachine& vm);
@@ -855,12 +949,25 @@ class moEffectParticlesFractal : public moEffect
         int luaCmpMemory(moLuaVirtualMachine& vm);
         int luaReadMemory(moLuaVirtualMachine& vm);
         int luaWriteMemory(moLuaVirtualMachine& vm);
+        int luaLoadMemory(moLuaVirtualMachine& vm);
         int luaDumpMemory(moLuaVirtualMachine& vm);
-        //int luaCellGrow(moLuaVirtualMachine& vm);
+
+        int luaCellRotate(moLuaVirtualMachine& vm);
+        int luaCellGrow(moLuaVirtualMachine& vm);
         //int luaCell(moLuaVirtualMachine& vm);
+        int luaCellUpdateProgram(moLuaVirtualMachine& vm);
+
+        int luaCellLink(moLuaVirtualMachine& vm);
+        int luaCellUnlink(moLuaVirtualMachine& vm);
+
 
         int luaCellEndProgram(moLuaVirtualMachine& vm);
         int luaCellDumpProgram(moLuaVirtualMachine& vm);
+
+        int luaCellLoadProgram(moLuaVirtualMachine& vm);
+        int luaCellSaveProgram(moLuaVirtualMachine& vm);
+
+        int luaGetMemory(moLuaVirtualMachine& vm);
 
         ///end script functions
 
@@ -897,7 +1004,30 @@ class moEffectParticlesFractal : public moEffect
         long drawing_features; /// 0: nothing 1: motion  2: all
         long texture_mode;
         float particles_separation;
+        float texture_opacity;
+        float texture_off_x;
+        float texture_off_y;
+        float texture_scale_x;
+        float texture_scale_y;
+        float texture_rotation;
         int random_color_function;
+
+        long texture_2_mode;
+        float texture_2_opacity;
+        float texture_2_off_x;
+        float texture_2_off_y;
+        float texture_2_scale_x;
+        float texture_2_scale_y;
+        float texture_2_rotation;
+
+        long geometry_mode;
+        long geometry_shader_off;
+        float feather_segments;
+        float feather_length;
+        float feather_head;
+        float feather_dynamic;
+
+        float diffmax;
 
 
         bool ortho;
@@ -992,7 +1122,6 @@ class moEffectParticlesFractal : public moEffect
 
         moText  m_MediumTextureLoadedName;//Composition Medium [COLORS are OPTIONS]
 
-
         bool  m_bAltitudeTextureSwapOn;
         moTexture*  m_pAltitudeTextureSwap;
         moTextureFilter*  m_pTFilter_AltitudeTextureSwap;
@@ -1040,6 +1169,7 @@ class moEffectParticlesFractal : public moEffect
         moTextureFilter*  m_pTFilter_PositionTextureSwap;
         moTexture*  m_pPositionTexture;
         moTextureFilter*  m_pTFilter_PositionTexture;
+        int m_pTFilter_PositionMediumIndex;
 
         GLfloat* m_PositionArray;
 
@@ -1064,6 +1194,15 @@ class moEffectParticlesFractal : public moEffect
         moTextureFilter*  m_pTFilter_OrientationTexture;
 
         moTexture*  m_pStateTextureFinal;
+
+        bool  m_bNormalTextureSwapOn;
+        moTexture*  m_pNormalTextureSwap;
+        moTextureFilter*  m_pTFilter_NormalTextureSwap;
+        moTexture*  m_pNormalTexture;
+        moTextureFilter*  m_pTFilter_NormalTexture;
+        int m_pTFilter_NormalMediumIndex;
+
+        moTexture* m_pNormalTextureFinal;
 
         /**
         * Material Dim
@@ -1123,12 +1262,25 @@ class moEffectParticlesFractal : public moEffect
         moTexture*  m_pCreationTextureFinal;
 
         int numParticles;
+        int numVertices;
         GLfloat *posArray;
         GLfloat *scaleArray;
         GLfloat *orientationArray;
         GLfloat *stateArray;
         GLfloat *velocityArray;
         GLfloat *colorArray;
+        GLfloat *materialArray;
+        GLfloat *normalArray;
+
+        GLfloat *indexArray;
+        GLfloat *quadsArray;
+        GLfloat *quadscoordArray;
+        GLfloat *trianglesArray;
+        GLfloat *trianglesCoordArray;
+        GLfloat *trianglesScaleArray;
+        GLfloat *trianglesOrientationArray;
+        GLfloat *trianglesColorArray;
+        GLint   *trianglesIndices;
 
         long    cell_position;
         long    cell_position_i;
@@ -1139,6 +1291,110 @@ class moEffectParticlesFractal : public moEffect
         ///calligram
         moTextureBuffer*    m_pTexBuf;
         int     m_nImages;
+        MOuint m_texture_array;
+
+
+        int w;
+        int h;
+
+        moShaderManager* pSMan;
+        moGLManager* pGLMan;
+        moRenderManager* pRMan;
+        moTextureManager* pTMan;
+        moFBManager* pFMan;
+
+        int m_emitions_w,m_emitions_h;
+        MOuint m_emitions_array;
+        MOuint m_emitions_array_it;
+        moTextureBuffer*  m_pEmitionsArray;
+        moShaderGLSL m_EmitterShader;
+        moFBO* m_pFBO_Emitions;
+        moTexture*  m_pEmitionsTexture;//morfogenes?
+        moTexture*  m_pEmitionsTextureSwap;//morfogenes?
+        GLint m_EmitterShaderPositionIndex;
+        GLint m_EmitterShaderTextureIndex;
+        GLint m_EmitterShaderProjectionMatrixIndex;
+        GLint m_EmitterShaderColsIndex;
+        GLint m_EmitterShaderRowsIndex;
+
+        int m_cohesion_w,m_cohesion_h;
+        MOuint m_cohesion_array;
+        MOuint m_cohesion_array_it;
+        moTextureBuffer*  m_pCohesionArray;
+        moShaderGLSL m_CohesionShader;
+        moFBO* m_pFBO_Cohesion;
+        moTexture*  m_pCohesionTexture;//morfogenes?
+        moTexture*  m_pCohesionTextureSwap;//morfogenes?
+        GLint m_CohesionShaderPositionIndex;
+        GLint m_CohesionShaderTexturePositionIndex;
+        GLint m_CohesionShaderTextureIndex;
+        GLint m_CohesionShaderProjectionMatrixIndex;
+        GLint m_CohesionShaderPositionMatrixIndex;
+        GLint m_CohesionShaderColsIndex;
+        GLint m_CohesionShaderRowsIndex;
+        GLint m_CohesionShaderTextureEmitionsArrayIndex;
+        GLint m_CohesionShaderEmitionWIndex;
+        GLint m_CohesionShaderEmitionHIndex;
+
+        moShaderGLSL m_RenderShader;
+        MOuint m_RenderShaderColorIndex;
+        MOuint m_RenderShaderOpacityIndex;
+        MOuint m_RenderShaderColorsIndex;
+        MOuint m_RenderShaderMaterialsIndex;
+        MOuint m_RenderShaderCellMemIndex;
+        MOuint m_RenderShaderCellStateIndex;
+        MOuint m_RenderShaderTexturePositionIndex;
+        MOuint m_RenderShaderTextureScaleIndex;
+        MOuint m_RenderShaderTextureOrientationIndex;
+
+        MOuint m_RenderShaderScaleIndex;
+        MOuint m_RenderShaderScaleVIndex;
+        MOuint m_RenderShaderPositionIndex;
+        MOuint m_RenderShaderOrientationIndex;
+        MOuint m_RenderShaderTextureIndex;
+        MOuint m_RenderShaderTextureModeIndex;
+        MOuint m_RenderShaderTextureOpacityIndex;
+        MOuint m_RenderShaderTextureOffXIndex;
+        MOuint m_RenderShaderTextureOffYIndex;
+        MOuint m_RenderShaderTextureScaleXIndex;
+        MOuint m_RenderShaderTextureScaleYIndex;
+        MOuint m_RenderShaderTextureRotationIndex;
+
+        MOuint m_RenderShaderTexture2Index;
+        MOuint m_RenderShaderTexture2ModeIndex;
+        MOuint m_RenderShaderTexture2OpacityIndex;
+        MOuint m_RenderShaderTexture2OffXIndex;
+        MOuint m_RenderShaderTexture2OffYIndex;
+        MOuint m_RenderShaderTexture2ScaleXIndex;
+        MOuint m_RenderShaderTexture2ScaleYIndex;
+        MOuint m_RenderShaderTexture2RotationIndex;
+
+        MOuint m_RenderShaderDiffMaxIndex;
+
+        MOuint m_RenderShaderTextureNormalIndex;
+
+        MOuint m_RenderShaderTextureArrayIndex;
+        MOuint m_RenderShaderNormalIndex;
+        MOuint m_RenderShaderProjectionMatrixIndex;
+        MOuint m_RenderShaderTexCoordIndex;
+        MOuint m_RenderShaderTexCoordEdgeIndex;
+        MOuint m_RenderShaderWireframeWidthIndex;
+        MOuint m_RenderShaderTexWSegmentsIndex;
+        MOuint m_RenderShaderTexHSegmentsIndex;
+        MOuint m_RenderShaderLightIndex;
+        MOuint m_RenderShaderEyeIndex;
+
+        MOuint m_RenderShaderGeometryModeIndex;
+        MOuint m_RenderShaderFeatherSegmentsIndex;
+        MOuint m_RenderShaderFeatherHeadIndex;
+        MOuint m_RenderShaderFeatherLengthIndex;
+        MOuint m_RenderShaderFeatherDynamicIndex;
+
+        MOuint m_RenderShaderColsIndex;
+        MOuint m_RenderShaderRowsIndex;
+
+
+
 };
 
 

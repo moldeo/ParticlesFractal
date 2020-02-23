@@ -1197,7 +1197,7 @@ void moEffectParticlesFractal::UpdateParameters() {
 
   moGLMatrixf PosResult;
 
-  if (m_EmitterShader.Initialized() && posArray && 1==1) {
+  if (m_EmitterShader.Initialized() && posArray && MO_USE_EMITTER_SHADERS) {
 
     if (m_pFBO_Emitions)
       m_pFBO_Emitions->Bind();
@@ -1337,7 +1337,7 @@ void moEffectParticlesFractal::UpdateParameters() {
     }
   }
 
-  if (m_CohesionShader.Initialized() && posArray && 1==2) {
+  if (m_CohesionShader.Initialized() && posArray && MO_USE_COHESION_SHADERS) {
 
     if (m_pFBO_Cohesion)
       m_pFBO_Cohesion->Bind();

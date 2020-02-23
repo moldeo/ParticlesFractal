@@ -56,6 +56,9 @@
 #include "moTimeManager.h"
 #include "moFilterManager.h"
 
+#define MO_USE_EMITTER_SHADERS 0
+#define MO_USE_COHESION_SHADERS 0
+
 #define MO_PARTICLES_TRANSLATE_X 0
 #define MO_PARTICLES_TRANSLATE_Y 1
 #define MO_PARTICLES_SCALE_X 2

@@ -10,8 +10,8 @@ lib_LTLIBRARIES = libmoldeo_particlesfractal.la
 libmoldeo_particlesfractal_la_SOURCES = moEffectParticlesFractal.cpp moEffectParticlesFractal.h moEffectParticlesFractalFactory.cpp moEffectParticlesFractalFactory.h
 libmoldeo_particlesfractal_la_CPPFLAGS = ${DFLAGS} ${LIBMOLDEO_CFLAGS}
 libmoldeo_particlesfractal_la_LDFLAGS =
-libmoldeo_particlesfractal_la_LIBADD = 
-libmoldeo_particlesfractal_la_LIBS = ${LIBMOLDEO_LIBS}
+libmoldeo_particlesfractal_la_LIBADD = -lGLU -lglut
+libmoldeo_particlesfractal_la_LIBS = ${LIBMOLDEO_LIBS} -lGLU -lglut
 
 moduletype = effects
 datadir = ${prefix}/share/moldeo
@@ -21,4 +21,3 @@ docdir = ${prefix}/share/doc/moldeo
 
 AM_CPPFLAGS = -DDATADIR=\"$(datadir)\" -DMODULESDIR=\"$(modulesdir)\"
 ACLOCAL_AMFLAGS=-I m4
-

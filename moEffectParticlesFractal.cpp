@@ -3481,9 +3481,9 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 
 //  SetColor( m_Config[moR(PARTICLES_COLOR)][MO_SELECTED], m_Config[moR(PARTICLES_ALPHA)][MO_SELECTED], m_EffectState );
 
-  float scalex = m_Config.Eval( moR(PARTICLES_SCALEX_PARTICLE) );
-  float scaley = m_Config.Eval( moR(PARTICLES_SCALEY_PARTICLE) );
-  float scalez = m_Config.Eval( moR(PARTICLES_SCALEZ_PARTICLE) );
+  float scalepx = m_Config.Eval( moR(PARTICLES_SCALEX_PARTICLE) );
+  float scalepy = m_Config.Eval( moR(PARTICLES_SCALEY_PARTICLE) );
+  float scalepz = m_Config.Eval( moR(PARTICLES_SCALEZ_PARTICLE) );
   float sizex = 1.0 * m_Physics.m_EmitterSize.X() / (1.0+abs(m_rows));
   float sizey = 1.0 * m_Physics.m_EmitterSize.Y() / (1.0+abs(m_cols));
   float sizez = 1.0 * m_Physics.m_EmitterSize.Z();
@@ -3498,8 +3498,9 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
   int ioff,joff,ijoff;
 	int mcols4 =  m_cols * 4;
 
-  glMatrixMode(GL_MODELVIEW);
-  glPushMatrix();
+  //glMatrixMode(GL_MODELVIEW);
+  //glPushMatrix();
+	//glLoadIdentity();
 
 	setUpLighting();
 
@@ -3672,9 +3673,9 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 	            //glRotatef(  rx, V.X(), V.Y(), V.Z() );
 
 							//SCALEX,Y,Z particle
-							sx = ssx*scalex;
-	            sy = ssy*scaley;
-	            sz = ssz*scalez;
+							float spx = ssx*scalepx;
+	            float spy = ssy*scalepy;
+	            float spz = ssz*scalepz;
 
 
 	            if (m_pTexBuf) {
@@ -3692,7 +3693,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 
 								//glDrawPoin
 								glBindTexture(GL_TEXTURE_2D,0);
-								glPointSize(2.0*sx);
+								glPointSize(2.0*spx);
 								glBegin(GL_POINTS);
 		              glTexCoord2f( tcoordx, tcoordy );
 		              glVertex3f( x, y, z);
@@ -3701,7 +3702,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 							} else if (geometry_mode==PARTICLES_GEOMETRY_MODE_LINES &&
 								 				 ( j < (m_rows-1) ) ) {
 								glBindTexture(GL_TEXTURE_2D,0);
-								glLineWidth(2.0*sx);
+								glLineWidth(2.0*spx);
 								glBegin(GL_LINES);
 		              glTexCoord2f( tcoordx, tcoordy );
 		              glVertex3f( x, y, z);
@@ -3753,16 +3754,16 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 
 								glBegin(GL_QUADS);
 		              glTexCoord2f( tcoordx, tcoordy );
-		              glVertex3f( 0-sizex*sx, 0-sizey*sy, z);
+		              glVertex3f( 0-sizex*spx, 0-sizey*spy, z);
 
 		              glTexCoord2f( tcoordx+tsizex, tcoordy );
-		              glVertex3f( 0+sizex*sx, 0-sizey*sy, z);
+		              glVertex3f( 0+sizex*spx, 0-sizey*spy, z);
 
 		              glTexCoord2f( tcoordx+tsizex, tcoordy+tsizey );
-		              glVertex3f( 0+sizex*sx, 0+sizey*sy, z);
+		              glVertex3f( 0+sizex*spx, 0+sizey*spy, z);
 
 		              glTexCoord2f( tcoordx, tcoordy+tsizey );
-		              glVertex3f( 0-sizex*sx, 0+sizey*sy, z);
+		              glVertex3f( 0-sizex*spx, 0+sizey*spy, z);
 		            glEnd();
 							} else if (geometry_mode==PARTICLES_GEOMETRY_MODE_FEATHER) {
 
@@ -3786,7 +3787,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 	  }
 	}
   //MODebug2->Push( "positions:" + Tpositions );
-  glPopMatrix();
+  //glPopMatrix();
   glEnable(GL_TEXTURE_2D);
 }
 
@@ -4167,21 +4168,24 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
     sz = m_Config.Eval( moR(PARTICLES_SCALEZ));
 
 
-//scale
-    glScalef(   sx,
-              sy,
-              sz);
-
-    glTranslatef(   tx,
+		#ifdef MO_MACOSX
+		glTranslatef(   tx,
+                    ty,
+                    -tz );
+		#else
+		glTranslatef(   tx,
                     ty,
                     tz );
 
+		#endif
     //rotation
     glRotatef(  rx, 1.0, 0.0, 0.0 );
     glRotatef(  ry, 0.0, 1.0, 0.0 );
     glRotatef(  rz, 0.0, 0.0, 1.0 );
 
-
+		//scale
+		//DMessage(moText("s:")+FloatToStr(sx)+moText(",")+FloatToStr(sy)+moText(",")+FloatToStr(sz));
+		glScalef(   sx, sy, sz);
 
 
     //blending
@@ -5060,9 +5064,9 @@ int moEffectParticlesFractal::luaCellRotate(moLuaVirtualMachine& vm) {
 int moEffectParticlesFractal::luaCellGrow(moLuaVirtualMachine& vm) {
     lua_State *state = (lua_State *) vm;
 
-    float sx = (float) lua_tonumber (state, 1);
-    float sy = (float) lua_tonumber (state, 2);
-    float sz = (float) lua_tonumber (state, 3);
+    float lsx = (float) lua_tonumber (state, 1);
+    float lsy = (float) lua_tonumber (state, 2);
+    float lsz = (float) lua_tonumber (state, 3);
     //MODebug2->Message( moText("CellGrow: ") + IntToStr(lua_id_cell)+moText(" sx: ")+FloatToStr(sx)
     //                                                                +moText(" sy: ")+FloatToStr(sy)
     //                                                                +moText(" sz: ")+FloatToStr(sz) );
@@ -5070,9 +5074,9 @@ int moEffectParticlesFractal::luaCellGrow(moLuaVirtualMachine& vm) {
     if (cellcodeArray) {
         long cell_position_2nd = cell_position + 4*m_cellcode*m_cols;
         cellcodeArray[cell_position_2nd+0] = 0.21;
-        cellcodeArray[cell_position_2nd+1] = sx;
-        cellcodeArray[cell_position_2nd+2] = sy;
-        cellcodeArray[cell_position_2nd+3] = sz;
+        cellcodeArray[cell_position_2nd+1] = lsx;
+        cellcodeArray[cell_position_2nd+2] = lsy;
+        cellcodeArray[cell_position_2nd+3] = lsz;
         //m_pCellCodeTexture->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
         //m_pCellCodeTextureSwap->BuildFromBuffer(m_pCellCodeTexture->GetWidth(),m_pCellCodeTexture->GetHeight(), cellcodeArray, GL_RGBA, GL_FLOAT);
     }

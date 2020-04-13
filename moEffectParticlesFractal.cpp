@@ -4686,7 +4686,7 @@ switch (iFunctionNumber - m_iMethodBase)
     {
         case 0:
             ResetScriptCalling();
-            return luaGetDelta(vm);
+            //return luaGetDelta(vm);
         case 1:
             ResetScriptCalling();
             return luaGetParticleCount(vm);
@@ -4710,13 +4710,13 @@ switch (iFunctionNumber - m_iMethodBase)
             return luaGetParticleRotation(vm);
         case 8:
             ResetScriptCalling();
-            return luaGetParticleGraphics(vm);
+            //return luaGetParticleGraphics(vm);
         case 9:
             ResetScriptCalling();
-            return luaGetParticleOpacity(vm);
+            //return luaGetParticleOpacity(vm);
         case 10:
             ResetScriptCalling();
-            return luaGetParticleColor(vm);
+            //return luaGetParticleColor(vm);
 
 
         case 11:
@@ -4739,13 +4739,13 @@ switch (iFunctionNumber - m_iMethodBase)
             return luaUpdateParticleRotation(vm);
         case 17:
             ResetScriptCalling();
-            return luaUpdateParticleGraphics(vm);
+            //return luaUpdateParticleGraphics(vm);
         case 18:
             ResetScriptCalling();
-            return luaUpdateParticleOpacity(vm);
+            //return luaUpdateParticleOpacity(vm);
         case 19:
             ResetScriptCalling();
-            return luaUpdateParticleColor(vm);
+            //return luaUpdateParticleColor(vm);
 
         case 20:
             ResetScriptCalling();
@@ -4800,7 +4800,7 @@ switch (iFunctionNumber - m_iMethodBase)
             return luaWriteMemory(vm);
         case 34:
             ResetScriptCalling();
-            return luaReadMemory(vm);
+            //return luaReadMemory(vm);
         case 35:
             ResetScriptCalling();
             return luaDumpMemory(vm);
@@ -4821,7 +4821,7 @@ switch (iFunctionNumber - m_iMethodBase)
             return luaCellLink(vm);
         case 41:
             ResetScriptCalling();
-            return luaCellUnlink(vm);
+            //return luaCellUnlink(vm);
 
         case 42:
             ResetScriptCalling();
@@ -5457,6 +5457,14 @@ int moEffectParticlesFractal::luaGetParticle(moLuaVirtualMachine& vm)
     }
 
     return 3;
+}
+
+int moEffectParticlesFractal::luaGetParticleCount(moLuaVirtualMachine& vm)
+{
+    lua_State *state = (lua_State *) vm;
+
+    lua_pushnumber(state, (lua_Number) m_cols*m_rows );
+    return 1;
 }
 
 

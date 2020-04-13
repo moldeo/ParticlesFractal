@@ -918,7 +918,7 @@ class moEffectParticlesFractal : public moEffect
         /// Funciones para la escritura de scripts específicos de particulas
         void RegisterFunctions();
 
-        int luaGetDelta(moLuaVirtualMachine& vm);
+        //int luaGetDelta(moLuaVirtualMachine& vm);
         int luaGetParticleCount(moLuaVirtualMachine& vm);
         int luaGetParticle(moLuaVirtualMachine& vm);
         int luaGetParticlePosition(moLuaVirtualMachine& vm);
@@ -927,8 +927,8 @@ class moEffectParticlesFractal : public moEffect
         int luaGetParticleVelocity(moLuaVirtualMachine& vm);
         int luaGetParticleRotation(moLuaVirtualMachine& vm);
         int luaGetParticleGraphics(moLuaVirtualMachine& vm);
-        int luaGetParticleOpacity(moLuaVirtualMachine& vm);
-        int luaGetParticleColor(moLuaVirtualMachine& vm);
+        //int luaGetParticleOpacity(moLuaVirtualMachine& vm);
+        //int luaGetParticleColor(moLuaVirtualMachine& vm);
 
         int luaUpdateParticle( moLuaVirtualMachine& vm );
         int luaUpdateParticlePosition( moLuaVirtualMachine& vm );
@@ -936,9 +936,9 @@ class moEffectParticlesFractal : public moEffect
         int luaUpdateParticleScale( moLuaVirtualMachine& vm );
         int luaUpdateParticleVelocity( moLuaVirtualMachine& vm );
         int luaUpdateParticleRotation( moLuaVirtualMachine& vm );
-        int luaUpdateParticleGraphics( moLuaVirtualMachine& vm );
-        int luaUpdateParticleOpacity( moLuaVirtualMachine& vm );
-        int luaUpdateParticleColor( moLuaVirtualMachine& vm );
+        //int luaUpdateParticleGraphics( moLuaVirtualMachine& vm );
+        //int luaUpdateParticleOpacity( moLuaVirtualMachine& vm );
+        //int luaUpdateParticleColor( moLuaVirtualMachine& vm );
 
         int luaUpdateForce( moLuaVirtualMachine& vm );
 
@@ -960,7 +960,7 @@ class moEffectParticlesFractal : public moEffect
         int luaCellDie(moLuaVirtualMachine& vm);
 
         int luaCmpMemory(moLuaVirtualMachine& vm);
-        int luaReadMemory(moLuaVirtualMachine& vm);
+        //int luaReadMemory(moLuaVirtualMachine& vm);
         int luaWriteMemory(moLuaVirtualMachine& vm);
         int luaLoadMemory(moLuaVirtualMachine& vm);
         int luaDumpMemory(moLuaVirtualMachine& vm);

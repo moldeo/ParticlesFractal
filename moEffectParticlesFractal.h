@@ -55,6 +55,12 @@
 #include "moPlugin.h"
 #include "moTimeManager.h"
 #include "moFilterManager.h"
+#include <GL/glut.h>
+
+#define MO_USE_GEOMETRY_SHADERS 1
+
+#define MO_USE_EMITTER_SHADERS 0
+#define MO_USE_COHESION_SHADERS 0
 
 #define MO_PARTICLES_TRANSLATE_X 0
 #define MO_PARTICLES_TRANSLATE_Y 1
@@ -385,6 +391,13 @@ enum moParticlesFractalParamIndex {
 	PARTICLES_RANDOMVELOCITY_X,
 	PARTICLES_RANDOMVELOCITY_Y,
 	PARTICLES_RANDOMVELOCITY_Z,
+
+  PARTICLES_FLOW_MAX_VELOCITY,
+
+  PARTICLES_FLOW_COLUMN_X,
+  PARTICLES_FLOW_COLUMN_Y,
+  PARTICLES_FLOW_COLUMN_VELOCITY,
+  PARTICLES_FLOW_COLUMN_ROTATION,
 
 	PARTICLES_RANDOMMOTION,
 	PARTICLES_RANDOMMOTION_X,
@@ -1180,6 +1193,7 @@ class moEffectParticlesFractal : public moEffect
         moTexture*  m_pVelocityTexture;
         //moTextureFilterVelocity*  m_pTFilter_VelocityTexture;
         moTextureFilter*  m_pTFilter_VelocityTexture;
+        int m_pTFilter_VelocityVariabilityIndex;
 
         bool  m_bScaleTextureSwapOn;
         moTexture*  m_pScaleTextureSwap;

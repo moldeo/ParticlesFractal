@@ -479,9 +479,12 @@ enum moParticlesFractalParamIndex {
   PARTICLES_LIGHTMODE,
   PARTICLES_LIGHTX,
   PARTICLES_LIGHTY,
-  PARTICLES_LIGHTZ
-  /*
-  PARTICLES_ORDERING_MODE*/
+  PARTICLES_LIGHTZ,
+  /*light parameters*/
+  PARTICLES_AMBIENTCOLOR,
+  PARTICLES_DIFFUSECOLOR,
+  PARTICLES_SPECULARCOLOR,
+  PARTICLES_SHININESS
 };
 
 
@@ -736,9 +739,13 @@ class moParticlesFractalPhysics : public moAbstract {
     moVector3f      m_TargetViewVector;
     moVector3f      m_UpViewVector;
 
-
+    /*Light Source*/
     moVector3f      m_SourceLightVector;
     moParticlesSimpleLightMode m_SourceLighMode;
+    moVector4f      m_SourceLightAmbientColor;
+    moVector4f      m_SourceLightDiffuseColor;
+    moVector4f      m_SourceLightSpecularColor;
+    double          m_SourceLightShininess;
 
     double          m_RandomVelocity;
     moVector3f      m_VelocityVector;
@@ -1396,6 +1403,10 @@ class moEffectParticlesFractal : public moEffect
         MOuint m_RenderShaderTexWSegmentsIndex;
         MOuint m_RenderShaderTexHSegmentsIndex;
         MOuint m_RenderShaderLightIndex;
+        MOuint m_RenderShaderLightAmbientIndex;
+        MOuint m_RenderShaderLightDiffuseIndex;
+        MOuint m_RenderShaderLightSpecularIndex;
+        MOuint m_RenderShaderLightShininessIndex;
         MOuint m_RenderShaderEyeIndex;
 
         MOuint m_RenderShaderGeometryModeIndex;

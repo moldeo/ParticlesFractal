@@ -54,6 +54,8 @@ moEffectParticlesFractal::moEffectParticlesFractal() {
   m_pMediumTextureSwap = NULL;
   m_bMediumTextureSwapOn = false;
 
+	m_pAltitudeTexture = NULL;
+	m_pVariabilityTexture = NULL;
 
 	m_MediumTextureLoadedName = "";
 
@@ -350,12 +352,17 @@ p_configdefinition->Add( moText("upviewx"), MO_PARAM_FUNCTION, PARTICLES_UPVIEWX
 		p_configdefinition->Add( moText("feather_head"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_HEAD, moValue( "1", "FUNCTION").Ref());
 		p_configdefinition->Add( moText("feather_dynamic"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_DYNAMIC, moValue( "0", "FUNCTION").Ref());
 
-	p_configdefinition->Add( moText("lightmode"), MO_PARAM_NUMERIC, PARTICLES_LIGHTMODE, moValue( "0", "NUM") );
-	p_configdefinition->Add( moText("lightx"), MO_PARAM_FUNCTION, PARTICLES_LIGHTX, moValue( "0.0", "FUNCTION").Ref() );
-	p_configdefinition->Add( moText("lighty"), MO_PARAM_FUNCTION, PARTICLES_LIGHTY, moValue( "4.0", "FUNCTION").Ref() );
-	p_configdefinition->Add( moText("lightz"), MO_PARAM_FUNCTION, PARTICLES_LIGHTZ, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("lightmode"), MO_PARAM_NUMERIC, PARTICLES_LIGHTMODE, moValue( "0", "NUM") );
+		p_configdefinition->Add( moText("lightx"), MO_PARAM_FUNCTION, PARTICLES_LIGHTX, moValue( "0.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("lighty"), MO_PARAM_FUNCTION, PARTICLES_LIGHTY, moValue( "4.0", "FUNCTION").Ref() );
+		p_configdefinition->Add( moText("lightz"), MO_PARAM_FUNCTION, PARTICLES_LIGHTZ, moValue( "0.0", "FUNCTION").Ref() );
 
-	return p_configdefinition;
+		p_configdefinition->Add( moText("light_ambient"), MO_PARAM_COLOR, PARTICLES_AMBIENTCOLOR );
+		p_configdefinition->Add( moText("light_diffuse"), MO_PARAM_COLOR, PARTICLES_DIFFUSECOLOR );
+		p_configdefinition->Add( moText("light_specular"), MO_PARAM_COLOR, PARTICLES_SPECULARCOLOR );
+		p_configdefinition->Add( moText("light_shininess"), MO_PARAM_FUNCTION, PARTICLES_SHININESS, moValue( "1.0", "FUNCTION").Ref() );
+
+		return p_configdefinition;
 }
 
 MOboolean
@@ -515,6 +522,11 @@ moEffectParticlesFractal::Init()
     moDefineParamIndex( PARTICLES_LIGHTX, moText("lightx") );
     moDefineParamIndex( PARTICLES_LIGHTY, moText("lighty") );
     moDefineParamIndex( PARTICLES_LIGHTZ, moText("lightz") );
+
+		moDefineParamIndex( PARTICLES_AMBIENTCOLOR, moText("light_ambient") );
+		moDefineParamIndex( PARTICLES_DIFFUSECOLOR, moText("light_diffuse") );
+		moDefineParamIndex( PARTICLES_SPECULARCOLOR, moText("light_specular") );
+		moDefineParamIndex( PARTICLES_SHININESS, moText("light_shininess") );
 
 
     m_Physics.m_ParticleScript = moText("");
@@ -1596,6 +1608,16 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
                                         m_Config.Eval( moR(PARTICLES_LIGHTY)),
                                         m_Config.Eval( moR(PARTICLES_LIGHTZ))
                                        );
+	  m_Config.EvalColor( moR(PARTICLES_PARTICLECOLOR) , m_EffectState.tempo.ang );
+		moVector4d amb = m_Config.EvalColor( moR(PARTICLES_AMBIENTCOLOR));
+		//DMessage(FloatToStr(amb.X())+FloatToStr(amb.Y())+FloatToStr(amb.Y()));
+		m_Physics.m_SourceLightAmbientColor = moVector4f( float(amb.X()), float(amb.Y()), float(amb.Z()), float(amb.W()) );
+		moVector4d diff = m_Config.EvalColor( moR(PARTICLES_DIFFUSECOLOR));
+		m_Physics.m_SourceLightDiffuseColor = moVector4f( float(diff.X()), float(diff.Y()), float(diff.Z()), float(diff.W()) );
+		moVector4d spec = m_Config.EvalColor( moR(PARTICLES_SPECULARCOLOR));
+		m_Physics.m_SourceLightSpecularColor = moVector4f( float(spec.X()), float(spec.Y()), float(spec.Z()), float(spec.W()) );
+		m_Physics.m_SourceLightShininess = (double) m_Config.Eval( moR(PARTICLES_SHININESS));
+
 
     m_Physics.gravitational = m_Config.Eval( moR(PARTICLES_GRAVITY));
     m_Physics.viscousdrag = m_Config.Eval( moR(PARTICLES_VISCOSITY));
@@ -3237,6 +3259,10 @@ void moEffectParticlesFractal::UpdateRenderShader() {
   m_RenderShaderTextureOrientationIndex = m_RenderShader.GetUniformID(moText("t_orientation"));
   m_RenderShaderProjectionMatrixIndex = m_RenderShader.GetUniformID("projmatrix");
   m_RenderShaderLightIndex = m_RenderShader.GetUniformID(moText("a_light"));
+	m_RenderShaderLightAmbientIndex = m_RenderShader.GetUniformID(moText("light_ambient"));
+	m_RenderShaderLightDiffuseIndex = m_RenderShader.GetUniformID(moText("light_diffuse"));
+	m_RenderShaderLightSpecularIndex = m_RenderShader.GetUniformID(moText("light_specular"));
+	m_RenderShaderLightShininessIndex = m_RenderShader.GetUniformID(moText("light_shininess"));
 
   m_RenderShaderColsIndex = m_RenderShader.GetUniformID(moText("mcols"));
   m_RenderShaderRowsIndex = m_RenderShader.GetUniformID(moText("mrows"));
@@ -3268,6 +3294,10 @@ void moEffectParticlesFractal::UpdateRenderShader() {
     " scalev:"+IntToStr(m_RenderShaderScaleVIndex)+""
     " projmatrix:"+IntToStr(m_RenderShaderProjectionMatrixIndex)+""
     " a_light:"+IntToStr(m_RenderShaderLightIndex)+""
+		" light_ambient:"+IntToStr(m_RenderShaderLightAmbientIndex)+""
+		" light_diffuse:"+IntToStr(m_RenderShaderLightDiffuseIndex)+""
+		" light_specular:"+IntToStr(m_RenderShaderLightSpecularIndex)+""
+		" light_shininess:"+IntToStr(m_RenderShaderLightShininessIndex)+""
     " t_normal:"+IntToStr(m_RenderShaderTextureNormalIndex)+""
     " t_image:"+IntToStr(m_RenderShaderTextureIndex)+""
     " texture_mode:"+IntToStr(m_RenderShaderTextureModeIndex)+""
@@ -3399,8 +3429,11 @@ void moEffectParticlesFractal::DrawTexture( moTexture* p_texture, float x, float
 
 	moPlaneGeometry IconQuad( 1.0 /*p_texture->GetWidth()*/, 1.0 /*p_texture->GetHeight()*/, 1, 1 );
 	moMaterial Material;
-	Material.m_Map = p_texture;
-	Material.m_MapGLId = p_texture->GetGLId();
+	if (p_texture) {
+		Material.m_Map = p_texture;
+		Material.m_MapGLId = p_texture->GetGLId();
+	}
+
 
 
     glEnable( GL_TEXTURE_2D );
@@ -3901,7 +3934,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
                             m_Physics.m_UpViewVector.Z());
     }
     Camera3D = pGLMan->GetProjectionMatrix();
-    long ttime = 8000;
+    long ttime = 4000;
   if (m_EffectState.tempo.Duration()<ttime) {
     MODebug2->Message("Time:" + IntToStr(m_EffectState.tempo.Duration()) );
   }
@@ -4001,6 +4034,10 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     //glUniform1f( m_EmitterShaderTexWSegmentsIndex, Mat.m_fTextWSegments );
     //glUniform1f( m_EmitterShaderTexHSegmentsIndex, Mat.m_fTextHSegments );
     glUniform3fv( m_RenderShaderLightIndex, 1, &Mat.m_vLight[0] );
+		glUniform3fv( m_RenderShaderLightAmbientIndex, 1, &m_Physics.m_SourceLightAmbientColor[0] );
+		glUniform3fv( m_RenderShaderLightDiffuseIndex, 1, &m_Physics.m_SourceLightDiffuseColor[0] );
+		glUniform3fv( m_RenderShaderLightSpecularIndex, 1, &m_Physics.m_SourceLightSpecularColor[0] );
+		glUniform1f( m_RenderShaderLightShininessIndex, m_Physics.m_SourceLightShininess);
     glUniform3fv( m_RenderShaderColorIndex, 1, &Mat.m_Color[0] );
     glUniform3fv( m_RenderShaderLightIndex, 1, &m_Physics.m_SourceLightVector[0] );
     glUniform3fv( m_RenderShaderEyeIndex, 1, &m_Physics.m_EyeVector[0] );

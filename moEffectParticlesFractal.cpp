@@ -3754,16 +3754,16 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 
 								glBegin(GL_QUADS);
 		              glTexCoord2f( tcoordx, tcoordy );
-		              glVertex3f( 0-sizex*spx, 0-sizey*spy, z);
+		              glVertex3f( 0-sizex*spx, 0-sizey*spy, 0);
 
 		              glTexCoord2f( tcoordx+tsizex, tcoordy );
-		              glVertex3f( 0+sizex*spx, 0-sizey*spy, z);
+		              glVertex3f( 0+sizex*spx, 0-sizey*spy, 0);
 
 		              glTexCoord2f( tcoordx+tsizex, tcoordy+tsizey );
-		              glVertex3f( 0+sizex*spx, 0+sizey*spy, z);
+		              glVertex3f( 0+sizex*spx, 0+sizey*spy, 0);
 
 		              glTexCoord2f( tcoordx, tcoordy+tsizey );
-		              glVertex3f( 0-sizex*spx, 0+sizey*spy, z);
+		              glVertex3f( 0-sizex*spx, 0+sizey*spy, 0);
 		            glEnd();
 							} else if (geometry_mode==PARTICLES_GEOMETRY_MODE_FEATHER) {
 
@@ -3909,7 +3909,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
   && (m_EffectState.tempo.Duration()>ttime/* || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE*/  ) ) {
 
     m_RenderShader.StartShader();
-    glLineWidth(2.0);
+    glLineWidth(3.0);
 
     moGLMatrixf& PMatrix( Camera3D );
     const moGLMatrixf& MMatrix( Model );

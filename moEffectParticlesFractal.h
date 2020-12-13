@@ -469,6 +469,8 @@ enum moParticlesFractalParamIndex {
 
 	PARTICLES_GEOMETRY_MODE,
 	PARTICLES_GEOMETRY_SHADER_OFF,
+  PARTICLES_POINT_SIZE,
+  PARTICLES_LINE_WIDTH,
 	PARTICLES_FEATHER_SEGMENTS,
 	PARTICLES_FEATHER_LENGTH,
 	PARTICLES_FEATHER_HEAD,
@@ -1042,6 +1044,10 @@ class moEffectParticlesFractal : public moEffect
 
         long geometry_mode;
         long geometry_shader_off;
+        
+        float point_size;
+        float line_width;
+        
         float feather_segments;
         float feather_length;
         float feather_head;

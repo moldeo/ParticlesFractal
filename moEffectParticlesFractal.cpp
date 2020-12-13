@@ -345,7 +345,9 @@ p_configdefinition->Add( moText("upviewx"), MO_PARAM_FUNCTION, PARTICLES_UPVIEWX
 		p_configdefinition->Add( moText("geometry_mode"), MO_PARAM_NUMERIC, PARTICLES_GEOMETRY_MODE, moValue( "0", "NUM").Ref(),
 		moText("POINT,LINE STRIP,TRIANGLE STRIP,QUADS,FEATHER,TETRA,TREE,CONE,VORONOI,INSTANCE"));
 		p_configdefinition->Add( moText("geometry_shader_off"), MO_PARAM_NUMERIC, PARTICLES_GEOMETRY_SHADER_OFF, moValue( "0", "NUM").Ref(), moText("FALSE,TRUE") );
-
+    
+    p_configdefinition->Add( moText("point_size"), MO_PARAM_FUNCTION, PARTICLES_POINT_SIZE, moValue( "1.0", "FUNCTION").Ref());
+    p_configdefinition->Add( moText("line_width"), MO_PARAM_FUNCTION, PARTICLES_LINE_WIDTH, moValue( "1.0", "FUNCTION").Ref());
 
 		p_configdefinition->Add( moText("feather_segments"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_SEGMENTS, moValue( "1.0", "FUNCTION").Ref());
 		p_configdefinition->Add( moText("feather_length"), MO_PARAM_FUNCTION, PARTICLES_FEATHER_LENGTH, moValue( "1.0", "FUNCTION").Ref());
@@ -513,6 +515,10 @@ moEffectParticlesFractal::Init()
 
     moDefineParamIndex( PARTICLES_GEOMETRY_MODE, moText("geometry_mode") );
     moDefineParamIndex( PARTICLES_GEOMETRY_SHADER_OFF, moText("geometry_shader_off") );
+    
+    moDefineParamIndex( PARTICLES_POINT_SIZE, moText("point_size") );
+    moDefineParamIndex( PARTICLES_LINE_WIDTH, moText("line_width") );
+    
     moDefineParamIndex( PARTICLES_FEATHER_SEGMENTS, moText("feather_segments") );
     moDefineParamIndex( PARTICLES_FEATHER_LENGTH, moText("feather_length") );
     moDefineParamIndex( PARTICLES_FEATHER_DYNAMIC, moText("feather_dynamic") );
@@ -1334,7 +1340,7 @@ void moEffectParticlesFractal::UpdateParameters() {
     glUniform1iARB( m_EmitterShaderRowsIndex, m_rows );
     glEnableVertexAttribArray( m_EmitterShaderPositionIndex );
     glVertexAttribPointer( m_EmitterShaderPositionIndex, 4, GL_FLOAT, false, 0, &posArray[0] );  // Set data type and location.
-    glPointSize(4.0/1.0);
+    glPointSize(point_size);
     glDrawArrays(GL_POINTS, 0, m_cols*m_rows );
 
     glDisableVertexAttribArray( m_EmitterShaderPositionIndex );
@@ -1481,7 +1487,7 @@ void moEffectParticlesFractal::UpdateParameters() {
 
     glEnableVertexAttribArray( m_CohesionShaderPositionIndex );
     glVertexAttribPointer( m_CohesionShaderPositionIndex, 4, GL_FLOAT, false, 0, &posArray[0] );  // Set data type and location.
-    glPointSize(1.0/1.0);
+    glPointSize(point_size);
     glDrawArrays(GL_POINTS, 0, m_cols*m_rows );
 
     glDisableVertexAttribArray( m_CohesionShaderPositionIndex );
@@ -1737,6 +1743,8 @@ m_pResourceManager->GetFBMan()->GetFBO(FBO[2])->SetReadTexture(m_pResourceManage
       m_pTexBuf = NULL;
     }
 
+    point_size = m_Config.Eval(moR(PARTICLES_POINT_SIZE));
+    line_width = m_Config.Eval(moR(PARTICLES_LINE_WIDTH));
 
     feather_segments = m_Config.Eval(moR(PARTICLES_FEATHER_SEGMENTS));
     feather_length =  m_Config.Eval(moR(PARTICLES_FEATHER_LENGTH));
@@ -3507,7 +3515,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 
 	//DMessage("DrawParticlesFractal");
   //glDisable(GL_TEXTURE_2D);
-  glPointSize(4.0f);
+  glPointSize(point_size);
   moText Tpositions;
   int max_scale_iterations = int( log2(m_rows) );
   int max_generations = max_scale_iterations * 2;
@@ -3726,7 +3734,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 
 								//glDrawPoin
 								glBindTexture(GL_TEXTURE_2D,0);
-								glPointSize(2.0*spx);
+								glPointSize(point_size*spx);
 								glBegin(GL_POINTS);
 		              glTexCoord2f( tcoordx, tcoordy );
 		              glVertex3f( x, y, z);
@@ -3735,7 +3743,7 @@ void moEffectParticlesFractal::DrawParticlesFractal( moTempo* tempogral, moEffec
 							} else if (geometry_mode==PARTICLES_GEOMETRY_MODE_LINES &&
 								 				 ( j < (m_rows-1) ) ) {
 								glBindTexture(GL_TEXTURE_2D,0);
-								glLineWidth(2.0*spx);
+								glLineWidth(line_width*spx);
 								glBegin(GL_LINES);
 		              glTexCoord2f( tcoordx, tcoordy );
 		              glVertex3f( x, y, z);
@@ -3942,7 +3950,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
   && (m_EffectState.tempo.Duration()>ttime/* || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE*/  ) ) {
 
     m_RenderShader.StartShader();
-    glLineWidth(3.0);
+    glLineWidth(line_width);
 
     moGLMatrixf& PMatrix( Camera3D );
     const moGLMatrixf& MMatrix( Model );
@@ -3967,7 +3975,7 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     moTexture* pMap = Mat.m_Map;
     if (pMap) {
         //int Tglid = pMap->GetGLId();
-        glPointSize(3.0);
+        glPointSize(point_size);
         glEnable( GL_TEXTURE_2D );
         glActiveTexture( GL_TEXTURE0 );///ACTIVATE TEXTURE UNIT 0
         glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );

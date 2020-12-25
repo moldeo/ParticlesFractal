@@ -345,7 +345,7 @@ p_configdefinition->Add( moText("upviewx"), MO_PARAM_FUNCTION, PARTICLES_UPVIEWX
 		p_configdefinition->Add( moText("geometry_mode"), MO_PARAM_NUMERIC, PARTICLES_GEOMETRY_MODE, moValue( "0", "NUM").Ref(),
 		moText("POINT,LINE STRIP,TRIANGLE STRIP,QUADS,FEATHER,TETRA,TREE,CONE,VORONOI,INSTANCE"));
 		p_configdefinition->Add( moText("geometry_shader_off"), MO_PARAM_NUMERIC, PARTICLES_GEOMETRY_SHADER_OFF, moValue( "0", "NUM").Ref(), moText("FALSE,TRUE") );
-    
+
     p_configdefinition->Add( moText("point_size"), MO_PARAM_FUNCTION, PARTICLES_POINT_SIZE, moValue( "1.0", "FUNCTION").Ref());
     p_configdefinition->Add( moText("line_width"), MO_PARAM_FUNCTION, PARTICLES_LINE_WIDTH, moValue( "1.0", "FUNCTION").Ref());
 
@@ -515,10 +515,10 @@ moEffectParticlesFractal::Init()
 
     moDefineParamIndex( PARTICLES_GEOMETRY_MODE, moText("geometry_mode") );
     moDefineParamIndex( PARTICLES_GEOMETRY_SHADER_OFF, moText("geometry_shader_off") );
-    
+
     moDefineParamIndex( PARTICLES_POINT_SIZE, moText("point_size") );
     moDefineParamIndex( PARTICLES_LINE_WIDTH, moText("line_width") );
-    
+
     moDefineParamIndex( PARTICLES_FEATHER_SEGMENTS, moText("feather_segments") );
     moDefineParamIndex( PARTICLES_FEATHER_LENGTH, moText("feather_length") );
     moDefineParamIndex( PARTICLES_FEATHER_DYNAMIC, moText("feather_dynamic") );
@@ -3164,11 +3164,19 @@ void moEffectParticlesFractal::UpdateRenderShader() {
     m_RenderShader.Finish();
   }
 
+	if (m_RenderShaderDebug.Initialized()) {
+    m_RenderShaderDebug.Finish();
+  }
+
   MODebug2->Message("moParticlesFractal::UpdateRenderShader > Creating basic Render Shader...");
   moText basen = pDM->GetDataPath()+moSlash + this->GetLabelName() + moSlash;
   moText vx_fn = basen + "rsVertex.glsl";
   moText fx_fn = basen + "rsFragment.glsl";
   moText gx_fn = basen + "rsGeometry.glsl";
+
+	moText vx_fn_deb = vx_fn;
+  moText fx_fn_deb = fx_fn;
+  moText gx_fn_deb = basen + "rsGeometryDebug.glsl";
 /**
 0 POINT,
 1 LINE_STRIP,
@@ -3211,15 +3219,25 @@ void moEffectParticlesFractal::UpdateRenderShader() {
   MODebug2->Message("loading from:" + vx_fn+ " " + fx_fn + " " + gx_fn);
 
   m_RenderShader.Init();
+	m_RenderShaderDebug.Init();
 	if (MO_USE_GEOMETRY_SHADERS) {
   	m_RenderShader.LoadShader( vx_fn, fx_fn, gx_fn  );
 		m_RenderShader.PrintVertShaderLog();
 	  m_RenderShader.PrintFragShaderLog();
 	  m_RenderShader.PrintGeomShaderLog();
+
+		m_RenderShaderDebug.LoadShader( vx_fn_deb, fx_fn_deb, gx_fn_deb  );
+		m_RenderShaderDebug.PrintVertShaderLog();
+	  m_RenderShaderDebug.PrintFragShaderLog();
+	  m_RenderShaderDebug.PrintGeomShaderLog();
 	} else {
 		m_RenderShader.LoadShader( vx_fn, fx_fn );
 		m_RenderShader.PrintVertShaderLog();
 	  m_RenderShader.PrintFragShaderLog();
+
+		m_RenderShaderDebug.LoadShader( vx_fn_deb, fx_fn_deb  );
+		m_RenderShaderDebug.PrintVertShaderLog();
+	  m_RenderShaderDebug.PrintFragShaderLog();
 	}
 
 
@@ -3266,6 +3284,7 @@ void moEffectParticlesFractal::UpdateRenderShader() {
   m_RenderShaderTextureScaleIndex = m_RenderShader.GetUniformID(moText("t_scale"));
   m_RenderShaderTextureOrientationIndex = m_RenderShader.GetUniformID(moText("t_orientation"));
   m_RenderShaderProjectionMatrixIndex = m_RenderShader.GetUniformID("projmatrix");
+	m_RenderShaderModelMatrixIndex =  m_RenderShader.GetUniformID("modelmatrix");
   m_RenderShaderLightIndex = m_RenderShader.GetUniformID(moText("a_light"));
 	m_RenderShaderLightAmbientIndex = m_RenderShader.GetUniformID(moText("light_ambient"));
 	m_RenderShaderLightDiffuseIndex = m_RenderShader.GetUniformID(moText("light_diffuse"));
@@ -3301,6 +3320,7 @@ void moEffectParticlesFractal::UpdateRenderShader() {
     " opacity:"+IntToStr(m_RenderShaderOpacityIndex)+""
     " scalev:"+IntToStr(m_RenderShaderScaleVIndex)+""
     " projmatrix:"+IntToStr(m_RenderShaderProjectionMatrixIndex)+""
+		" modelmatrix:"+IntToStr(m_RenderShaderModelMatrixIndex)+""
     " a_light:"+IntToStr(m_RenderShaderLightIndex)+""
 		" light_ambient:"+IntToStr(m_RenderShaderLightAmbientIndex)+""
 		" light_diffuse:"+IntToStr(m_RenderShaderLightDiffuseIndex)+""
@@ -3944,185 +3964,293 @@ void moEffectParticlesFractal::DrawParticlesFractalVBO( moTempo* tempogral, moEf
     Camera3D = pGLMan->GetProjectionMatrix();
     long ttime = 4000;
   if (m_EffectState.tempo.Duration()<ttime) {
-    MODebug2->Message("Time:" + IntToStr(m_EffectState.tempo.Duration()) );
+    MODebug2->Message("Time:" + IntToStr(m_EffectState.tempo.Duration())+ " Initialized: " + IntToStr((int)m_RenderShader.Initialized()) );
   }
   if (m_RenderShader.Initialized()
   && (m_EffectState.tempo.Duration()>ttime/* || m_Physics.m_EmitterType==PARTICLES_EMITTERTYPE_TREE*/  ) ) {
+		for(int a=0;a<2;a++) {
+			if (a==0) m_RenderShader.StartShader();
+			if (a==1) {
+				if (m_Config.Int(moR(PARTICLES_GUIDES))==0) continue;
+				m_RenderShaderDebug.StartShader();
+			}
 
-    m_RenderShader.StartShader();
-    glLineWidth(line_width);
+			glLineWidth(line_width);
 
-    moGLMatrixf& PMatrix( Camera3D );
-    const moGLMatrixf& MMatrix( Model );
-    moGLMatrixf Result;
-    Result = MMatrix*PMatrix;
+	    moGLMatrixf& PMatrix( Camera3D );
+	    const moGLMatrixf& BMMatrix( Model );
+			//moGLMatrixf ArcBallMatrix = moMatrix4f( 	Transform.M, true );
+	    //moMatrix3f camera2object = glm::inverse( moMatrix3f(transforms[MODE_CAMERA]) * moMatrix3f(mesh.object2world));
+			moGLMatrixf MMatrix;
+			//MMatrix = BMMatrix;
+			MMatrix = ArcBallMatrix*BMMatrix;
 
+			if ( arcball_angle!=0.0 ) {
+		    //moGLMatrixf camera2object = MMatrix*PMatrix;
+				//camera2object = camera2object.Inverse();
+		    //axis_in_object_coord = camera2object * moVector4f( axis_in_camera_coord.X(), axis_in_camera_coord.Y(), axis_in_camera_coord.Z(), 0.0 );
+		    //mesh.object2world = glm::rotate( mesh.object2world, glm::degrees(angle), axis_in_object_coord);
+				//axis_in_object_coord.Normalize();
+				if (arcball_angle>0.0) {
+					//ArcBallMatrix.Rotate( arcball_angle, axis_in_object_coord.X(), axis_in_object_coord.Y(), axis_in_object_coord.Z() );
+					ArcBallMatrix.Rotate( arcball_angle, axis_in_camera_coord.X(), axis_in_camera_coord.Y(), axis_in_camera_coord.Z() );
+					MMatrix = ArcBallMatrix*BMMatrix;
+				}
+				DMessage("axis_in_camera_coord:"+axis_in_camera_coord.ToJSON());
+				//DMessage("axis_in_object_coord:"+axis_in_object_coord.ToJSON());
+				//DMessage( ArcBallMatrix.ToJSON() );
+			}
 
-    //moGeometry& Geo( Sphere );
-    //const moFaceArray& Faces(Geo.GetFaces());
-    //const moVertexArray& Vertices(Geo.GetVertices());
-    //const float* Gpx = Geo.GetVerticesBuffer();
-    //const float* Gcx = Geo.GetColorBuffer();
-    //const float* Gtx = Geo.GetVerticesUVBuffer();
-    //const float* Gnx = Geo.GetNormalsBuffer();
-
-    //int facesCount = Faces.Count();
-
-    const float *pfv = Result.GetPointer();
-    //MODebug2->Message( "Result:\n"+Result.ToJSON() );
-    //MODebug2->Message( "facesCount:\n"+IntToStr(facesCount) );
-
-    moTexture* pMap = Mat.m_Map;
-    if (pMap) {
-        //int Tglid = pMap->GetGLId();
-        glPointSize(point_size);
-        glEnable( GL_TEXTURE_2D );
-        glActiveTexture( GL_TEXTURE0 );///ACTIVATE TEXTURE UNIT 0
-        glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
-        //MODebug2->Message( "Tglid:\n"+IntToStr(Tglid) );
-        if (Mat.m_Map->GetType()==MO_TYPE_MOVIE) {
-          moTextureAnimated* ptex_anim = (moTextureAnimated*)Mat.m_Map;
-          Mat2.m_MapGLId = ptex_anim->GetGLId( (moTempo *) &this->m_EffectState.tempo );
-        }
-    }
-
-    glUniformMatrix4fv( m_RenderShaderProjectionMatrixIndex, 1, GL_FALSE, pfv );
-
-    glActiveTexture( GL_TEXTURE0 + 2);
-    glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
-    glBindTexture( GL_TEXTURE_2D_ARRAY,  0 );
-    glUniform1i( m_RenderShaderTextureIndex, 2 );///
-
-    glActiveTexture( GL_TEXTURE0 + 3);
-    glBindTexture( GL_TEXTURE_2D, Mat2.m_MapGLId );
-    glBindTexture( GL_TEXTURE_2D_ARRAY,  0 );
-    glUniform1i( m_RenderShaderTexture2Index, 3 );///
+			//MMatrix = BMMatrix;
+	    moGLMatrixf Result;
+	    Result = MMatrix*PMatrix;
 
 
-    glActiveTexture( GL_TEXTURE0 + 5);
-    glBindTexture( GL_TEXTURE_2D, 0);
-    glBindTexture( GL_TEXTURE_2D_ARRAY, m_texture_array );
-    glUniform1i( m_RenderShaderTextureArrayIndex, 5 );
-    //MODebug2->Message( "m_texture_array:\n"+IntToStr(m_texture_array) );
-
-    glActiveTexture( GL_TEXTURE0 + 6);
-    glBindTexture( GL_TEXTURE_2D, m_pCellMemoryTextureFinal->GetGLId());
-    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
-    glUniform1i( m_RenderShaderCellMemIndex, 6 );
-
-    glActiveTexture( GL_TEXTURE0 + 7);
-    glBindTexture( GL_TEXTURE_2D, m_pStateTextureFinal->GetGLId());
-    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
-    glUniform1i( m_RenderShaderCellStateIndex, 7 );
-
-    glActiveTexture( GL_TEXTURE0 + 1);
-    glBindTexture( GL_TEXTURE_2D, m_pPositionTextureFinal->GetGLId());
-    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
-    glUniform1i( m_RenderShaderTexturePositionIndex, 1 );
-
-    glActiveTexture( GL_TEXTURE0 + 4);
-    glBindTexture( GL_TEXTURE_2D, m_pNormalTextureFinal->GetGLId());
-    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
-    glUniform1i( m_RenderShaderTextureNormalIndex, 4 );
-
-    glActiveTexture( GL_TEXTURE0 + 8);
-    glBindTexture( GL_TEXTURE_2D, m_pScaleTextureFinal->GetGLId());
-    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
-    glUniform1i( m_RenderShaderTextureScaleIndex, 8 );
-
-    glActiveTexture( GL_TEXTURE0 + 9);
-    glBindTexture( GL_TEXTURE_2D, m_pOrientationTextureFinal->GetGLId());
-    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
-    glUniform1i( m_RenderShaderTextureOrientationIndex, 9 );
 
 
-    //glUniform1i( m_RenderShaderColsIndex, m_cols );
-    //glUniform1i( m_RenderShaderRowsIndex, m_rows );
-    //glUniform1f( m_EmitterShaderWireframeWidthIndex, Mat.m_fWireframeWidth );
-    //glUniform1f( m_EmitterShaderTexWSegmentsIndex, Mat.m_fTextWSegments );
-    //glUniform1f( m_EmitterShaderTexHSegmentsIndex, Mat.m_fTextHSegments );
-    glUniform3fv( m_RenderShaderLightIndex, 1, &Mat.m_vLight[0] );
-		glUniform3fv( m_RenderShaderLightAmbientIndex, 1, &m_Physics.m_SourceLightAmbientColor[0] );
-		glUniform3fv( m_RenderShaderLightDiffuseIndex, 1, &m_Physics.m_SourceLightDiffuseColor[0] );
-		glUniform3fv( m_RenderShaderLightSpecularIndex, 1, &m_Physics.m_SourceLightSpecularColor[0] );
-		glUniform1f( m_RenderShaderLightShininessIndex, m_Physics.m_SourceLightShininess);
-    glUniform3fv( m_RenderShaderColorIndex, 1, &Mat.m_Color[0] );
-    glUniform3fv( m_RenderShaderLightIndex, 1, &m_Physics.m_SourceLightVector[0] );
-    glUniform3fv( m_RenderShaderEyeIndex, 1, &m_Physics.m_EyeVector[0] );
-    glUniform1f( m_RenderShaderOpacityIndex, Mat.m_fOpacity );
-
-    glUniform1i( m_RenderShaderTextureModeIndex, texture_mode );
-    glUniform1f( m_RenderShaderTextureOpacityIndex, texture_opacity );
-    glUniform1f( m_RenderShaderTextureOffXIndex, texture_off_x );
-    glUniform1f( m_RenderShaderTextureOffYIndex, texture_off_y );
-    glUniform1f( m_RenderShaderTextureScaleXIndex, texture_scale_x );
-    glUniform1f( m_RenderShaderTextureScaleYIndex, texture_scale_y );
-    glUniform1f( m_RenderShaderTextureRotationIndex, texture_rotation );
 
 
-    glUniform1i( m_RenderShaderTexture2ModeIndex, texture_2_mode );
-    glUniform1f( m_RenderShaderTexture2OpacityIndex, texture_2_opacity );
-    glUniform1f( m_RenderShaderTexture2OffXIndex, texture_2_off_x );
-    glUniform1f( m_RenderShaderTexture2OffYIndex, texture_2_off_y );
-    glUniform1f( m_RenderShaderTexture2ScaleXIndex, texture_2_scale_x );
-    glUniform1f( m_RenderShaderTexture2ScaleYIndex, texture_2_scale_y );
-    glUniform1f( m_RenderShaderTexture2RotationIndex, texture_2_rotation );
+	    //moGeometry& Geo( Sphere );
+	    //const moFaceArray& Faces(Geo.GetFaces());
+	    //const moVertexArray& Vertices(Geo.GetVertices());
+	    //const float* Gpx = Geo.GetVerticesBuffer();
+	    //const float* Gcx = Geo.GetColorBuffer();
+	    //const float* Gtx = Geo.GetVerticesUVBuffer();
+	    //const float* Gnx = Geo.GetNormalsBuffer();
 
-    glUniform1f( m_RenderShaderDiffMaxIndex, diffmax );
+	    //int facesCount = Faces.Count();
 
-    glUniform1i( m_RenderShaderColsIndex, m_cols );
-    glUniform1i( m_RenderShaderRowsIndex, m_rows );
+	    //const float *pfv = Result.GetPointer();
+			const float *pfv = PMatrix.GetPointer();
+			const float *pmfv = MMatrix.GetPointer();
+	    //MODebug2->Message( "Result:\n"+Result.ToJSON() );
+	    //MODebug2->Message( "facesCount:\n"+IntToStr(facesCount) );
 
-    moVector3f scalev( scalex*sizex, scaley*sizey, scalez*sizez);
-    glUniform3fv( m_RenderShaderScaleVIndex, 1, &scalev[0] );
+	    moTexture* pMap = Mat.m_Map;
+	    if (pMap) {
+	        //int Tglid = pMap->GetGLId();
+	        glPointSize(point_size);
+	        glEnable( GL_TEXTURE_2D );
+	        glActiveTexture( GL_TEXTURE0 );///ACTIVATE TEXTURE UNIT 0
+	        glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
+	        //MODebug2->Message( "Tglid:\n"+IntToStr(Tglid) );
+	        if (Mat.m_Map->GetType()==MO_TYPE_MOVIE) {
+	          moTextureAnimated* ptex_anim = (moTextureAnimated*)Mat.m_Map;
+	          Mat2.m_MapGLId = ptex_anim->GetGLId( (moTempo *) &this->m_EffectState.tempo );
+	        }
+	    }
 
-    glEnableVertexAttribArray( m_RenderShaderPositionIndex );
-    //glVertexAttribPointer( m_RenderShaderPositionIndex, 4, GL_FLOAT, false, 0, &trianglesArray[0] );  // Set data type and location.
-    glVertexAttribPointer( m_RenderShaderPositionIndex, 4, GL_FLOAT, false, 0, &posArray[0] );  // Set data type and location.
+	    glUniformMatrix4fv( m_RenderShaderProjectionMatrixIndex, 1, GL_FALSE, pfv );
+			glUniformMatrix4fv( m_RenderShaderModelMatrixIndex, 1, GL_FALSE, pmfv );
 
-    glEnableVertexAttribArray( m_RenderShaderColorsIndex );
-    //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
-    glVertexAttribPointer( m_RenderShaderColorsIndex, 4, GL_FLOAT, false, 0, &colorArray[0] );
+	    glActiveTexture( GL_TEXTURE0 + 2);
+	    glBindTexture( GL_TEXTURE_2D, Mat.m_MapGLId );
+	    glBindTexture( GL_TEXTURE_2D_ARRAY,  0 );
+	    glUniform1i( m_RenderShaderTextureIndex, 2 );///
 
-    glEnableVertexAttribArray( m_RenderShaderScaleIndex );
-    glVertexAttribPointer( m_RenderShaderScaleIndex, 4, GL_FLOAT, false, 0, &scaleArray[0] );
-
-    glEnableVertexAttribArray( m_RenderShaderNormalIndex );
-    glVertexAttribPointer( m_RenderShaderNormalIndex, 4, GL_FLOAT, false, 0, &normalArray[0] );
-
-    //glEnableVertexAttribArray( m_RenderShaderMaterialsIndex );
-    //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
-    //glVertexAttribPointer( m_RenderShaderMaterialsIndex, 4, GL_FLOAT, false, 0, &materialArray[0] );
-
-    glEnableVertexAttribArray( m_RenderShaderOrientationIndex );
-    glVertexAttribPointer( m_RenderShaderOrientationIndex, 4, GL_FLOAT, false, 0, &orientationArray[0] );
-
-
-    //glEnableVertexAttribArray( m_RenderShaderTexCoordIndex );
-    //glVertexAttribPointer( m_RenderShaderTexCoordIndex, 2, GL_FLOAT, false, 0, &trianglesCoordArray[0] );  // Set data type and location.
-
-    //glEnableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
-    //glVertexAttribPointer( m_EmitterShaderTexCoordEdgeIndex, 2, GL_FLOAT, false, 0, &Gtx[0] );  // Set data type and location.
-    //int vertexCount = p_src.m_Geometry.GetVertices().Count();
-    //int facesCount = p_src.m_Geometry.GetFaces().Count();
+	    glActiveTexture( GL_TEXTURE0 + 3);
+	    glBindTexture( GL_TEXTURE_2D, Mat2.m_MapGLId );
+	    glBindTexture( GL_TEXTURE_2D_ARRAY,  0 );
+	    glUniform1i( m_RenderShaderTexture2Index, 3 );///
 
 
-    //glDrawArrays( GL_TRIANGLES, 0, 3*m_cols*m_rows );
-    glDrawArrays( GL_POINTS, 0, m_cols*m_rows );
+	    glActiveTexture( GL_TEXTURE0 + 5);
+	    glBindTexture( GL_TEXTURE_2D, 0);
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, m_texture_array );
+	    glUniform1i( m_RenderShaderTextureArrayIndex, 5 );
+	    //MODebug2->Message( "m_texture_array:\n"+IntToStr(m_texture_array) );
 
-    //glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, &);
+	    glActiveTexture( GL_TEXTURE0 + 6);
+	    glBindTexture( GL_TEXTURE_2D, m_pCellMemoryTextureFinal->GetGLId());
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+	    glUniform1i( m_RenderShaderCellMemIndex, 6 );
 
-    glDisableVertexAttribArray( m_RenderShaderPositionIndex );
-    glDisableVertexAttribArray( m_RenderShaderColorsIndex );
-    glDisableVertexAttribArray( m_RenderShaderScaleIndex );
-    glDisableVertexAttribArray( m_RenderShaderOrientationIndex );
+	    glActiveTexture( GL_TEXTURE0 + 7);
+	    glBindTexture( GL_TEXTURE_2D, m_pStateTextureFinal->GetGLId());
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+	    glUniform1i( m_RenderShaderCellStateIndex, 7 );
 
-    glDisableVertexAttribArray( m_RenderShaderNormalIndex );
-    //glDisableVertexAttribArray( m_RenderShaderTexCoordIndex );
-    //glDisableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+	    glActiveTexture( GL_TEXTURE0 + 1);
+	    glBindTexture( GL_TEXTURE_2D, m_pPositionTextureFinal->GetGLId());
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+	    glUniform1i( m_RenderShaderTexturePositionIndex, 1 );
 
-    m_RenderShader.StopShader();
+	    glActiveTexture( GL_TEXTURE0 + 4);
+	    glBindTexture( GL_TEXTURE_2D, m_pNormalTextureFinal->GetGLId());
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+	    glUniform1i( m_RenderShaderTextureNormalIndex, 4 );
 
+	    glActiveTexture( GL_TEXTURE0 + 8);
+	    glBindTexture( GL_TEXTURE_2D, m_pScaleTextureFinal->GetGLId());
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+	    glUniform1i( m_RenderShaderTextureScaleIndex, 8 );
+
+	    glActiveTexture( GL_TEXTURE0 + 9);
+	    glBindTexture( GL_TEXTURE_2D, m_pOrientationTextureFinal->GetGLId());
+	    glBindTexture( GL_TEXTURE_2D_ARRAY, 0);
+	    glUniform1i( m_RenderShaderTextureOrientationIndex, 9 );
+
+
+	    //glUniform1i( m_RenderShaderColsIndex, m_cols );
+	    //glUniform1i( m_RenderShaderRowsIndex, m_rows );
+	    //glUniform1f( m_EmitterShaderWireframeWidthIndex, Mat.m_fWireframeWidth );
+	    //glUniform1f( m_EmitterShaderTexWSegmentsIndex, Mat.m_fTextWSegments );
+	    //glUniform1f( m_EmitterShaderTexHSegmentsIndex, Mat.m_fTextHSegments );
+	    glUniform3fv( m_RenderShaderLightIndex, 1, &Mat.m_vLight[0] );
+			glUniform3fv( m_RenderShaderLightAmbientIndex, 1, &m_Physics.m_SourceLightAmbientColor[0] );
+			glUniform3fv( m_RenderShaderLightDiffuseIndex, 1, &m_Physics.m_SourceLightDiffuseColor[0] );
+			glUniform3fv( m_RenderShaderLightSpecularIndex, 1, &m_Physics.m_SourceLightSpecularColor[0] );
+			glUniform1f( m_RenderShaderLightShininessIndex, m_Physics.m_SourceLightShininess);
+	    glUniform3fv( m_RenderShaderColorIndex, 1, &Mat.m_Color[0] );
+	    glUniform3fv( m_RenderShaderLightIndex, 1, &m_Physics.m_SourceLightVector[0] );
+	    glUniform3fv( m_RenderShaderEyeIndex, 1, &m_Physics.m_EyeVector[0] );
+	    glUniform1f( m_RenderShaderOpacityIndex, Mat.m_fOpacity );
+
+	    glUniform1i( m_RenderShaderTextureModeIndex, texture_mode );
+	    glUniform1f( m_RenderShaderTextureOpacityIndex, texture_opacity );
+	    glUniform1f( m_RenderShaderTextureOffXIndex, texture_off_x );
+	    glUniform1f( m_RenderShaderTextureOffYIndex, texture_off_y );
+	    glUniform1f( m_RenderShaderTextureScaleXIndex, texture_scale_x );
+	    glUniform1f( m_RenderShaderTextureScaleYIndex, texture_scale_y );
+	    glUniform1f( m_RenderShaderTextureRotationIndex, texture_rotation );
+
+
+	    glUniform1i( m_RenderShaderTexture2ModeIndex, texture_2_mode );
+	    glUniform1f( m_RenderShaderTexture2OpacityIndex, texture_2_opacity );
+	    glUniform1f( m_RenderShaderTexture2OffXIndex, texture_2_off_x );
+	    glUniform1f( m_RenderShaderTexture2OffYIndex, texture_2_off_y );
+	    glUniform1f( m_RenderShaderTexture2ScaleXIndex, texture_2_scale_x );
+	    glUniform1f( m_RenderShaderTexture2ScaleYIndex, texture_2_scale_y );
+	    glUniform1f( m_RenderShaderTexture2RotationIndex, texture_2_rotation );
+
+	    glUniform1f( m_RenderShaderDiffMaxIndex, diffmax );
+
+	    glUniform1i( m_RenderShaderColsIndex, m_cols );
+	    glUniform1i( m_RenderShaderRowsIndex, m_rows );
+
+	    moVector3f scalev( scalex*sizex, scaley*sizey, scalez*sizez);
+	    glUniform3fv( m_RenderShaderScaleVIndex, 1, &scalev[0] );
+
+	    glEnableVertexAttribArray( m_RenderShaderPositionIndex );
+	    //glVertexAttribPointer( m_RenderShaderPositionIndex, 4, GL_FLOAT, false, 0, &trianglesArray[0] );  // Set data type and location.
+	    glVertexAttribPointer( m_RenderShaderPositionIndex, 4, GL_FLOAT, false, 0, &posArray[0] );  // Set data type and location.
+
+	    glEnableVertexAttribArray( m_RenderShaderColorsIndex );
+	    //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
+	    glVertexAttribPointer( m_RenderShaderColorsIndex, 4, GL_FLOAT, false, 0, &colorArray[0] );
+
+	    glEnableVertexAttribArray( m_RenderShaderScaleIndex );
+	    glVertexAttribPointer( m_RenderShaderScaleIndex, 4, GL_FLOAT, false, 0, &scaleArray[0] );
+
+	    glEnableVertexAttribArray( m_RenderShaderNormalIndex );
+	    glVertexAttribPointer( m_RenderShaderNormalIndex, 4, GL_FLOAT, false, 0, &normalArray[0] );
+
+	    //glEnableVertexAttribArray( m_RenderShaderMaterialsIndex );
+	    //glVertexAttribPointer( m_RenderShaderColorsIndex, 3, GL_FLOAT, false, 0, &trianglesColorArray[0] );
+	    //glVertexAttribPointer( m_RenderShaderMaterialsIndex, 4, GL_FLOAT, false, 0, &materialArray[0] );
+
+	    glEnableVertexAttribArray( m_RenderShaderOrientationIndex );
+	    glVertexAttribPointer( m_RenderShaderOrientationIndex, 4, GL_FLOAT, false, 0, &orientationArray[0] );
+
+
+	    //glEnableVertexAttribArray( m_RenderShaderTexCoordIndex );
+	    //glVertexAttribPointer( m_RenderShaderTexCoordIndex, 2, GL_FLOAT, false, 0, &trianglesCoordArray[0] );  // Set data type and location.
+
+	    //glEnableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+	    //glVertexAttribPointer( m_EmitterShaderTexCoordEdgeIndex, 2, GL_FLOAT, false, 0, &Gtx[0] );  // Set data type and location.
+	    //int vertexCount = p_src.m_Geometry.GetVertices().Count();
+	    //int facesCount = p_src.m_Geometry.GetFaces().Count();
+
+
+	    //glDrawArrays( GL_TRIANGLES, 0, 3*m_cols*m_rows );
+	    glDrawArrays( GL_POINTS, 0, m_cols*m_rows );
+
+	    //glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, &);
+
+	    glDisableVertexAttribArray( m_RenderShaderPositionIndex );
+	    glDisableVertexAttribArray( m_RenderShaderColorsIndex );
+	    glDisableVertexAttribArray( m_RenderShaderScaleIndex );
+	    glDisableVertexAttribArray( m_RenderShaderOrientationIndex );
+
+	    glDisableVertexAttribArray( m_RenderShaderNormalIndex );
+	    //glDisableVertexAttribArray( m_RenderShaderTexCoordIndex );
+	    //glDisableVertexAttribArray( m_EmitterShaderTexCoordEdgeIndex );
+
+	    if (a==0) m_RenderShader.StopShader();
+			if (a==0) m_RenderShaderDebug.StopShader();
+		}
+
+		/*DRAWING GUIDES*/
+		if (m_Config.Int(moR(PARTICLES_GUIDES))>0) {
+			glBindTexture( GL_TEXTURE_2D, 0 );
+			glColor4f( 0.0, 1.0, 0.0, 1.0 );
+			glLineWidth(8.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0, 0, 0 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( 1.0,0.0,0.0);
+			glEnd();
+
+			glColor4f( 0.0, 0.0, 1.0, 1.0 );
+			glLineWidth(8.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0, 0, 0 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( 0.0,1.0,0.0);
+			glEnd();
+
+			glColor4f( 1.0, 0.0, 0.0, 1.0 );
+			glLineWidth(8.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0, 0, 0 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( 0.0,0.0,1.0);
+			glEnd();
+
+
+			glColor4f( 1.0, 1.0, 1.0, 1.0 );
+			glLineWidth(3.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0, 0, 0 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( axis_in_camera_coord.X(), axis_in_camera_coord.Y(), axis_in_camera_coord.Z());
+				//glVertex3f( 0.0,0.0,5.0);
+			glEnd();
+
+			/*glColor4f( 0.5, 1.0, 0.5, 1.0 );
+			glLineWidth(3.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0, 0, 0 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( axis_in_object_coord.X(), axis_in_object_coord.Y(), axis_in_object_coord.Z());
+				//glVertex3f( 0.0,0.0,5.0);
+			glEnd();*/
+
+			glColor4f( 0.0, 0.0, 1.0, 1.0 );
+			glLineWidth(3.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0, 0, 0 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( va.X()*1.0, va.Y()*1.0, va.Z()*1.0);
+				//glVertex3f( 0.0,0.0,5.0);
+			glEnd();
+
+			glColor4f( 1.0, 0.0, 0.0, 1.0 );
+			glLineWidth(3.0);
+			glBegin(GL_LINES);
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f( 0+0.01, 0+0.01, 0+0.01 );
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f( vb.X()*1.0+0.01, vb.Y()*1.0+0.01, vb.Z()*1.0+0.01);
+				//glVertex3f( 0.0,0.0,5.0);
+			glEnd();
+		}
   }
 
 }
@@ -4162,7 +4290,7 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
         glLoadIdentity();									// Reset The Projection Matrix
         glOrtho(-0.5,0.5,-0.5*h/w,0.5*h/w,-1,1);                              // Set Up An Ortho Screen
     } else {
-        glDisable(GL_DEPTH_TEST);
+        glEnable(GL_DEPTH_TEST);
         //glDepthMask(GL_FALSE);
         glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
         glLoadIdentity();									// Reset The Projection Matrix
@@ -4211,6 +4339,65 @@ void moEffectParticlesFractal::Draw( moTempo* tempogral, moEffectState* parentst
     sx = m_Config.Eval( moR(PARTICLES_SCALEX));
     sy = m_Config.Eval( moR(PARTICLES_SCALEY));
     sz = m_Config.Eval( moR(PARTICLES_SCALEZ));
+
+		if (m_Config.Int(moR(PARTICLES_GUIDES))>0) {
+			for(int c=0;c<20.0; c+=2.0) {
+				glBindTexture( GL_TEXTURE_2D, 0 );
+				glColor4f( 0.0, 1.0, 0.0, 1.0 );
+				glLineWidth(1.0);
+				glBegin(GL_LINES);
+					glTexCoord2f( 0.0, 0.0 );
+					glVertex3f( 0+c, 0, 0 );
+					glTexCoord2f( 1.0, 0.0 );
+					glVertex3f( 1.0+c,0.0,0.0);
+				glEnd();
+
+				glColor4f( 0.0, 0.0, 1.0, 1.0 );
+				glLineWidth(1.0);
+				glBegin(GL_LINES);
+					glTexCoord2f( 0.0, 0.0 );
+					glVertex3f( 0, 0+c, 0 );
+					glTexCoord2f( 1.0, 0.0 );
+					glVertex3f( 0.0,1.0+c,0.0);
+				glEnd();
+
+				glColor4f( 1.0, 0.0, 0.0, 1.0 );
+				glLineWidth(1.0);
+				glBegin(GL_LINES);
+					glTexCoord2f( 0.0, 0.0 );
+					glVertex3f( 0, 0, 0+c );
+					glTexCoord2f( 1.0, 0.0 );
+					glVertex3f( 0.0,0.0,1.0+c);
+				glEnd();
+			}
+
+			float ln = 4.0;
+			glLineWidth(4.0);
+			for( float li=0; li<ln; li+=1.0 ) {
+				if ( floor(4.0*(li/ln))==0 ) glColor4f( m_Physics.m_SourceLightAmbientColor.X(), m_Physics.m_SourceLightAmbientColor.Y(), m_Physics.m_SourceLightAmbientColor.Z(), 1.0 );
+				if ( floor(4.0*(li/ln))==1 ) glColor4f( m_Physics.m_SourceLightDiffuseColor.X(), m_Physics.m_SourceLightDiffuseColor.Y(), m_Physics.m_SourceLightDiffuseColor.Z(), 1.0 );
+				if ( floor(4.0*(li/ln))==2 ) glColor4f( m_Physics.m_SourceLightSpecularColor.X(), m_Physics.m_SourceLightSpecularColor.Y(), m_Physics.m_SourceLightSpecularColor.Z(), 1.0 );
+				if ( floor(4.0*(li/ln))==3 ) glColor4f( m_Physics.m_SourceLightShininess,
+					m_Physics.m_SourceLightShininess,
+					m_Physics.m_SourceLightShininess, 1.0 );
+				float da = 2 * 3.1415 * li / (ln);
+				float da_n = 2 * 3.1415 * (li+1.0) / (ln);
+				float dx = 0.5*cos( da );
+				float dy = 0.5*sin( da );
+				float dx2 = 0.5*cos( da_n );
+				float dy2 = 0.5*sin( da_n );
+				glBegin(GL_LINES);
+					glTexCoord2f( 0.0, 0.0 );
+					glVertex3f( m_Physics.m_SourceLightVector.X()+dx,
+											m_Physics.m_SourceLightVector.Y()+dy,
+											m_Physics.m_SourceLightVector.Z() );
+					glTexCoord2f( 1.0, 0.0 );
+					glVertex3f( m_Physics.m_SourceLightVector.X()+dx2,
+											m_Physics.m_SourceLightVector.Y()+dy2,
+											m_Physics.m_SourceLightVector.Z() );
+				glEnd();
+			}
+		}
 
 
 		#ifdef MO_MACOSX

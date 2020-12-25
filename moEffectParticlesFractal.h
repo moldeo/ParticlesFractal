@@ -1044,10 +1044,10 @@ class moEffectParticlesFractal : public moEffect
 
         long geometry_mode;
         long geometry_shader_off;
-        
+
         float point_size;
         float line_width;
-        
+
         float feather_segments;
         float feather_length;
         float feather_head;
@@ -1364,6 +1364,7 @@ class moEffectParticlesFractal : public moEffect
         GLint m_CohesionShaderEmitionHIndex;
 
         moShaderGLSL m_RenderShader;
+        moShaderGLSL m_RenderShaderDebug;
         MOuint m_RenderShaderColorIndex;
         MOuint m_RenderShaderOpacityIndex;
         MOuint m_RenderShaderColorsIndex;
@@ -1403,6 +1404,7 @@ class moEffectParticlesFractal : public moEffect
         MOuint m_RenderShaderTextureArrayIndex;
         MOuint m_RenderShaderNormalIndex;
         MOuint m_RenderShaderProjectionMatrixIndex;
+        MOuint m_RenderShaderModelMatrixIndex;
         MOuint m_RenderShaderTexCoordIndex;
         MOuint m_RenderShaderTexCoordEdgeIndex;
         MOuint m_RenderShaderWireframeWidthIndex;
@@ -1423,8 +1425,6 @@ class moEffectParticlesFractal : public moEffect
 
         MOuint m_RenderShaderColsIndex;
         MOuint m_RenderShaderRowsIndex;
-
-
 
 };
 
